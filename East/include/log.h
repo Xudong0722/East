@@ -53,19 +53,20 @@ public:
     static const char* toStr(Level level);
 };
 
+class Logger;
 class LogFormatter{
 public:
     using sptr = std::shared_ptr<LogFormatter>;
     LogFormatter(const std::string& pattern);
-    std::string format(LogEvent::sptr event);
+    std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event);
 
-private:
+public:
     class FormatItem{
     public:
         using sptr = std::shared_ptr<FormatItem>;
         virtual ~FormatItem() {}
         
-        virtual void format(std::ostream& os, LogEvent::sptr event);
+        virtual void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event);
     };
 
     void init();
@@ -74,23 +75,121 @@ private:
     std::vector<FormatItem::sptr> m_items;
 };
 
+class MessageFormatItem : public LogFormatter::FormatItem{
+public:
+    MessageFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << event->getContent();
+    }
+};
+
+class LevelFormatItem : public LogFormatter::FormatItem{
+public:
+    LevelFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << LogLevel::toStr(level);
+    }
+};
+
+class ElapseFormatItem : public LogFormatter::FormatItem{
+public:
+    ElapseFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << event->getElapse();
+    }
+};
+
+class LoggerNameFormatItem : public LogFormatter::FormatItem{
+public:
+    LoggerNameFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << logger->getName();
+    }
+};
+
+class ThreadIdFormatItem : public LogFormatter::FormatItem{
+public:
+    ThreadIdFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << event->getThreadId();  
+    }
+};
+
+class FiberIdFormatItem : public LogFormatter::FormatItem{
+public:
+    FiberIdFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << event->getFiberId();
+    }
+};
+
+
+class DateTimeFormatItem : public LogFormatter::FormatItem{
+public:
+    DateTimeFormatItem(const std::string& format = "%Y:%m:%d %H%M%S")
+        : m_format(format){
+
+    }
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << event->getThreadId();  
+    }
+private:
+    std::string m_format;
+};
+
+class FilenameFormatItem : public LogFormatter::FormatItem{
+public:
+    FilenameFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << event->getFileName();  
+    }
+};
+
+class NewLineFormatItem : public LogFormatter::FormatItem{
+public:
+    NewLineFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << std::endl;  
+    }
+};
+
+class LineFormatItem : public LogFormatter::FormatItem{
+public:
+    LineFormatItem(const std::string& __ = "") {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << event->getLineNo();  
+    }
+};
+
+class NormalStringFormatItem : public LogFormatter::FormatItem{
+public:
+    NormalStringFormatItem(const std::string& __ = "")
+        : m_normal_str(__) {}
+    void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
+        os << m_normal_str;
+    }
+private:
+    std::string m_normal_str;
+};
+
 //Log target, std or file ...
 class LogAppender{
 public:
     using sptr = std::shared_ptr<LogAppender>;
-    virtual ~LogAppender();
+    virtual ~LogAppender() {}
 
-    virtual void Log(LogLevel::Level level, LogEvent::sptr event) = 0;
+    virtual void Log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) = 0;
     
     void setFormatter(LogFormatter::sptr formatter) { m_formatter = formatter; }
     LogFormatter::sptr getFormatter() const { return m_formatter; }
 protected:
-    LogLevel m_level;
+    LogLevel::Level m_level;
     LogFormatter::sptr m_formatter;
 };
 
-class Logger{
+class Logger: public std::enable_shared_from_this<Logger> {
 public:
+    using sptr = std::shared_ptr<Logger>;
     Logger(const std::string& name = "root");
     void Log(LogLevel::Level level, LogEvent::sptr event);
 
@@ -102,6 +201,8 @@ public:
 
     LogLevel::Level getLevel() const { return m_level; }
     void setLevel(LogLevel::Level level) { m_level = level; }
+    const std::string& getName() const { return m_name; }
+
     void addAppender(LogAppender::sptr appender);
     void delAppender(LogAppender::sptr appender);
 private:
@@ -113,7 +214,7 @@ private:
 class StdoutLogAppender: public LogAppender{
 public:
     using sptr = std::shared_ptr<StdoutLogAppender>;
-    void Log(LogLevel::Level level, LogEvent::sptr event) override;
+    void Log(Logger::sptr logger, LogLevel::Level level, LogEvent::sptr event) override;
 };
 
 class FileLogAppender: public LogAppender{
@@ -121,7 +222,7 @@ public:
     using sptr = std::shared_ptr<FileLogAppender>;
     FileLogAppender(const std::string& filename);
 
-    void Log(LogLevel::Level level, LogEvent::sptr event) override;
+    void Log(Logger::sptr logger, LogLevel::Level level, LogEvent::sptr event) override;
 
     bool reopen(); //TODO, Why add this api?
 private:

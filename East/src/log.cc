@@ -8,6 +8,8 @@
 #include <iostream>
 #include <cassert>
 #include <tuple>
+#include <map>
+#include <functional>
 
 namespace East{
 
@@ -22,12 +24,12 @@ LogFormatter::LogFormatter(const std::string& pattern)
     : m_pattern(pattern){
 }
 
-std::string LogFormatter::format(LogEvent::sptr event){
-    if(nullptr == event) return {};
+std::string LogFormatter::format(Logger::sptr logger, LogLevel::Level level, LogEvent::sptr event){
+    if(nullptr == event || nullptr == logger) return {};
     std::stringstream ss;
     for(const auto&it : m_items){
         if(nullptr == it) continue;
-        it->format(ss, event);
+        it->format(ss, logger, level, event);
     }
     return ss.str();
 }
@@ -113,6 +115,36 @@ void LogFormatter::init(){
     %f -- file name
     %l -- line numble
     */
+
+    static std::map<std::string, 
+        std::function<FormatItem::sptr(const std::string& fmt)> > s_format_items {
+      {"m", [](const std::string& fmt){ return FormatItem::sptr(new MessageFormatItem(fmt));}},
+      {"p", [](const std::string& fmt){ return FormatItem::sptr(new LevelFormatItem(fmt));}},
+      {"r", [](const std::string& fmt){ return FormatItem::sptr(new ElapseFormatItem(fmt));}},
+      {"c", [](const std::string& fmt){ return FormatItem::sptr(new LoggerNameFormatItem(fmt));}},
+      {"t", [](const std::string& fmt){ return FormatItem::sptr(new ThreadIdFormatItem(fmt));}},
+      {"n", [](const std::string& fmt){ return FormatItem::sptr(new NewLineFormatItem(fmt));}},
+      {"d", [](const std::string& fmt){ return FormatItem::sptr(new DateTimeFormatItem(fmt));}},
+      {"f", [](const std::string& fmt){ return FormatItem::sptr(new FilenameFormatItem(fmt));}},
+      {"l", [](const std::string& fmt){ return FormatItem::sptr(new LineFormatItem(fmt));}},
+    };
+
+    for(const auto& item : vec_pattern){
+        if(std::get<2>(item) == 0){
+            m_items.emplace_back(std::make_shared<NormalStringFormatItem>(std::get<0>(item)));
+        }else{
+            //find in s_format_items, if we can't find right format item, we will push back a error msg
+            const auto cit = s_format_items.find(std::get<0>(item));
+            if(cit == s_format_items.end()){
+                m_items.emplace_back(std::make_shared<NormalStringFormatItem>("<<error_format %" + std::get<0>(item) + ">>"));
+            }else{
+                m_items.emplace_back(cit->second(std::get<1>(item)));
+            }
+        }
+
+
+        std::cout << std::get<0>(item) << "--" << std::get<1>(item) << "--" << std::get<2>(item) << std::endl;
+    }
 }
 
 Logger::Logger(const std::string& name)
@@ -121,9 +153,10 @@ Logger::Logger(const std::string& name)
 
 void Logger::Log(LogLevel::Level level, LogEvent::sptr event){
     if(level < m_level) return;
+    auto self  = shared_from_this();
     for(auto& appender : m_appenders){
         if(nullptr != appender){
-            appender->Log(level, event);
+            appender->Log(self, level, event);
         }
     }
 }
@@ -161,10 +194,10 @@ void Logger::delAppender(LogAppender::sptr appender) {
     }
 }
 
-void StdoutLogAppender::Log(LogLevel::Level level, LogEvent::sptr event)
+void StdoutLogAppender::Log(Logger::sptr logger, LogLevel::Level level, LogEvent::sptr event)
 {
     if(level < m_level || nullptr == m_formatter || nullptr == event) return;
-    std::cout << m_formatter->format(event);
+    std::cout << m_formatter->format(logger, level, event);
 }
 
 FileLogAppender::FileLogAppender(const std::string &filename)
@@ -172,10 +205,10 @@ FileLogAppender::FileLogAppender(const std::string &filename)
 {
 }
 
-void FileLogAppender::Log(LogLevel::Level level, LogEvent::sptr event)
+void FileLogAppender::Log(Logger::sptr logger, LogLevel::Level level, LogEvent::sptr event)
 {
     if(level < m_level || nullptr == m_formatter || nullptr == event) return ;
-    m_filestream << m_formatter->format(event);
+    m_filestream << m_formatter->format(logger, level, event);
 }
 
 bool FileLogAppender::reopen()
