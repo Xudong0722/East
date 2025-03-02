@@ -85,12 +85,19 @@ public:
 
 class DateTimeFormatItem : public LogFormatter::FormatItem{
 public:
-    DateTimeFormatItem(const std::string& format = "%Y:%m:%d %H%M%S")
+    DateTimeFormatItem(const std::string& format = "%Y-%m-%d %H:%M:%S")
         : m_format(format){
-
+        if(format.empty()){
+            m_format = "%Y-%m-%d %H:%M:%S";
+        }
     }
     void format(std::ostream& os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override{
-        os << event->getTimeStamp();  
+        struct tm tm;
+        time_t time = event->getTimeStamp();
+        localtime_r(&time, &tm);
+        char buf[64]{};
+        strftime(buf, sizeof(buf), m_format.c_str(), &tm);
+        os << buf;
     }
 private:
     std::string m_format;
@@ -169,7 +176,7 @@ void LogFormatter::init(){
         auto fmt_begin{0u};
         std::string fmt, pattern;
         while(j < m_pattern.size()){
-            if(m_pattern[j] == ' ') break;
+            if(!isalpha(m_pattern[j]) && m_pattern[j] != '{' && m_pattern[j] != '}') break;
 
             if(fmt_status == 0){
                 if(m_pattern[j] == '{'){
@@ -198,7 +205,7 @@ void LogFormatter::init(){
             }
             pattern = m_pattern.substr(i + 1, j - i - 1);
             vec_pattern.emplace_back(std::make_tuple(pattern, "", 1));
-            i = j;
+            i = j - 1;
         }else if(fmt_status == 1){
             std::cout << "Parse error " << m_pattern.substr(i) << '\n';
             vec_pattern.emplace_back(std::make_tuple("<error parse>", "", 0));
@@ -209,7 +216,7 @@ void LogFormatter::init(){
                 no_style_str.clear();
             }
             vec_pattern.emplace_back(std::make_tuple(pattern, fmt, 1));
-            i = j;
+            i = j - 1;
         }
     }
     if(!no_style_str.empty()){
@@ -262,7 +269,7 @@ void LogFormatter::init(){
 Logger::Logger(const std::string& name)
     : m_name(name)
     , m_level(LogLevel::DEBUG) {
-    m_formatter.reset(new LogFormatter("%d [%p] %f %l %m %n"));  //default formatter
+    m_formatter.reset(new LogFormatter("%d [%p] <%f:%l> %m %n"));  //default formatter
 }
 
 void Logger::Log(LogLevel::Level level, LogEvent::sptr event){

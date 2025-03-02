@@ -33,8 +33,8 @@ public:
     uint32_t getThreadId() const { return m_threadId; }
     uint32_t getFiberId() const { return m_fiberId; }
     uint64_t getTimeStamp() const { return m_time; }
-    const std::string& getContent() const { return m_content; }
-    
+    std::string getContent() const { return m_ss.str(); }
+    std::stringstream& getsstream() { return m_ss; }
 private:
     const char* m_file{nullptr};  //8 bytes on x64
     int32_t m_line{0};
@@ -43,6 +43,7 @@ private:
     uint32_t m_fiberId{0};
     uint64_t m_time{0};
     std::string m_content;
+    std::stringstream m_ss;
 };
 
 class LogLevel{
@@ -91,7 +92,7 @@ public:
     void setFormatter(LogFormatter::sptr formatter) { m_formatter = formatter; }
     LogFormatter::sptr getFormatter() const { return m_formatter; }
 protected:
-    LogLevel::Level m_level;
+    LogLevel::Level m_level{LogLevel::DEBUG};
     LogFormatter::sptr m_formatter;
 };
 
