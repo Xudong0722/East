@@ -5,7 +5,8 @@ SET(CMAKE_VERBOSE_MAKEFILE ON)
 SET(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function")
 
 SET(LIB_SRC 
-    East/src/log.cc)
+    East/src/log.cc
+    East/src/util.cc)
 
 ADD_LIBRARY(East SHARED ${LIB_SRC})
 ADD_EXECUTABLE(test tests/test.cc)
