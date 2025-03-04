@@ -1,56 +1,17 @@
 /*
  * @Author: Xudong0722
- * @Date: 2025-02-25 21:52:46
+ * @Date: 2025-03-04 23:54:14
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-04 00:44:32
+ * @Last Modified time: 2025-03-04 23:56:45
  */
-#include "../include/log.h"
-#include <iostream>
-#include <cassert>
-#include <tuple>
-#include <map>
+
 #include <functional>
+
+#include "LogFormatter.h"
+#include "Logger.h"
 
 namespace East
 {
-
-    LogEvent::LogEvent(std::shared_ptr<Logger> logger,
-                       LogLevel::Level level,
-                       const char *file,
-                       int32_t line,
-                       int32_t elapse,
-                       uint32_t thread_id,
-                       uint32_t fiber_id,
-                       uint64_t time)
-        : m_file(file), m_line(line), m_elapse(elapse), m_threadId(thread_id), m_fiberId(fiber_id), m_time(time), m_level(level), m_logger(logger)
-    {
-    }
-
-    LogEventWrap::LogEventWrap(LogEvent::sptr event)
-        : m_event(event)
-    {
-    }
-
-    LogEventWrap::~LogEventWrap()
-    {
-        if (nullptr != m_event)
-        {
-            m_event->getLogger()->Log(m_event->getLevel(), m_event);
-        }
-    }
-
-    std::stringstream &LogEventWrap::getSStream()
-    {
-        return m_event->getSStream();
-    }
-
-    const char *LogLevel::toStr(Level level)
-    {
-        static const char *str_levels[] = {"NONE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
-        assert(level >= DEBUG && level <= FATAL);
-        return str_levels[level];
-    }
-
     class MessageFormatItem : public LogFormatter::FormatItem
     {
     public:
@@ -285,7 +246,7 @@ namespace East
             }
             else if (fmt_status == 1)
             {
-                std::cout << "Parse error " << m_pattern.substr(i) << '\n';
+                // std::cout << "Parse error " << m_pattern.substr(i) << '\n';
                 vec_pattern.emplace_back(std::make_tuple("<error parse>", fmt, 0));
                 break;
             }
@@ -356,129 +317,8 @@ namespace East
                 }
             }
 
-            std::cout << std::get<0>(item) << "--" << std::get<1>(item) << "--" << std::get<2>(item) << std::endl;
+            // std::cout << std::get<0>(item) << "--" << std::get<1>(item) << "--" << std::get<2>(item) << std::endl;
         }
     }
 
-    Logger::Logger(const std::string &name)
-        : m_name(name), m_level(LogLevel::DEBUG)
-    {
-        m_formatter.reset(new LogFormatter("%d{%Y-%m-%d %H:%M:%S}%T%t%T%F%T[%p]%T[%c]%T%f:%l%T%m%n")); // default formatter
-    }
-
-    void Logger::Log(LogLevel::Level level, LogEvent::sptr event)
-    {
-        if (level < m_level)
-            return;
-        auto self = shared_from_this();
-        for (auto &appender : m_appenders)
-        {
-            if (nullptr != appender)
-            {
-                appender->Log(self, level, event);
-            }
-        }
-    }
-
-    void Logger::debug(LogEvent::sptr event)
-    {
-        Log(LogLevel::DEBUG, event);
-    }
-
-    void Logger::info(LogEvent::sptr event)
-    {
-        Log(LogLevel::INFO, event);
-    }
-
-    void Logger::warn(LogEvent::sptr event)
-    {
-        Log(LogLevel::WARN, event);
-    }
-
-    void Logger::error(LogEvent::sptr event)
-    {
-        Log(LogLevel::ERROR, event);
-    }
-
-    void Logger::fatal(LogEvent::sptr event)
-    {
-        Log(LogLevel::FATAL, event);
-    }
-
-    void Logger::addAppender(LogAppender::sptr appender)
-    {
-        if (nullptr == appender)
-            return;
-        if (nullptr == appender->getFormatter())
-        {
-            appender->setFormatter(m_formatter);
-        }
-        m_appenders.emplace_back(appender);
-    }
-
-    void Logger::delAppender(LogAppender::sptr appender)
-    {
-        for (auto cit = m_appenders.cbegin(); cit != m_appenders.cend(); ++cit)
-        {
-            if (*cit == appender)
-            {
-                m_appenders.erase(cit);
-                break;
-            }
-        }
-    }
-
-    void StdoutLogAppender::Log(Logger::sptr logger, LogLevel::Level level, LogEvent::sptr event)
-    {
-        if (level < m_level || nullptr == m_formatter || nullptr == event)
-            return;
-        std::cout << m_formatter->format(logger, level, event);
-    }
-
-    FileLogAppender::FileLogAppender(const std::string &filename)
-        : m_filename(filename)
-    {
-        reopen();
-    }
-
-    FileLogAppender::~FileLogAppender()
-    {
-        if (m_filestream)
-        {
-            m_filestream.close();
-        }
-    }
-
-    void FileLogAppender::Log(Logger::sptr logger, LogLevel::Level level, LogEvent::sptr event)
-    {
-        if (level < m_level || nullptr == m_formatter || nullptr == event)
-            return;
-        m_filestream << m_formatter->format(logger, level, event);
-    }
-
-    bool FileLogAppender::reopen()
-    {
-        if (m_filestream)
-        {
-            m_filestream.close();
-        }
-        m_filestream.open(m_filename);
-        return !!m_filestream;
-    }
-
-    LoggerMgr::LoggerMgr()
-    {
-        m_root.reset(new Logger);
-        m_root->addAppender(std::make_shared<StdoutLogAppender>());
-    }
-
-    void LoggerMgr::init()
-    {
-    }
-
-    Logger::sptr LoggerMgr::getLogger(const std::string &name)
-    {
-        auto it = m_loggers.find(name);
-        return it == m_loggers.end() ? m_root : it->second;
-    }
-} // namespace East
+}

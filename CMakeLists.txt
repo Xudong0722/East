@@ -1,17 +1,19 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.26)
-PROJECT(East)
+cmake_minimum_required(VERSION 3.26)
+project(East VERSION 1.0)
 
-SET(CMAKE_VERBOSE_MAKEFILE ON)
-SET(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function")
+set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function")
 
-SET(LIB_SRC 
-    East/src/log.cc
-    East/src/util.cc)
+# SET(LIB_SRC 
+#     East/src/log.cc
+#     East/src/util.cc)
 
-ADD_LIBRARY(East SHARED ${LIB_SRC})
-ADD_EXECUTABLE(test tests/test.cc)
-ADD_DEPENDENCIES(test East)
-TARGET_LINK_LIBRARIES(test East)
+add_subdirectory(East/src)
 
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+#ADD_LIBRARY(East SHARED ${LIB_SRC})
+add_executable(test tests/test.cc)
+add_dependencies(test East)
+target_link_libraries(test East)
+
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

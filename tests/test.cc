@@ -1,4 +1,4 @@
-#include "../East/include/log.h"
+#include "../East/include/Elog.h"
 #include "../East/include/util.h"
 #include <iostream>
 
@@ -10,6 +10,8 @@ int main()
     auto event = std::make_shared<East::LogEvent>(logger, East::LogLevel::FATAL, __FILE__, __LINE__, 0, East::getThreadId(), 2, time(0));
     event->getSStream() << "first log! " << std::this_thread::get_id();
     logger->Log(East::LogLevel::DEBUG, event);
+    std::cout << event->getContent() << std::endl;
+    std::cout << event->getLevel() << " " << logger->getLevel() << std::endl;
 
     // std::cout << static_cast<size_t>(pthread_self()) <<" " << std::hash<std::thread::id>{}(std::this_thread::get_id());
 
