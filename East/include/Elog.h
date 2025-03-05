@@ -2,7 +2,7 @@
  * @Author: Xudong0722
  * @Date: 2025-02-24 20:45:27
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-05 00:00:19
+ * @Last Modified time: 2025-03-05 23:49:16
  */
 
 #pragma once
@@ -24,3 +24,5 @@
 #define ELOG_WARN(logger) ELOG_LEVEL(logger, East::LogLevel::WARN)
 #define ELOG_ERROR(logger) ELOG_LEVEL(logger, East::LogLevel::ERROR)
 #define ELOG_FATAL(logger) ELOG_LEVEL(logger, East::LogLevel::FATAL)
+
+#define ELOG_ROOT() East::LogMgr::GetInst()->getRoot()

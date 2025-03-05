@@ -15,5 +15,9 @@ add_executable(test tests/test.cc)
 add_dependencies(test East)
 target_link_libraries(test East)
 
+add_executable(test_config tests/test_config.cc)
+add_dependencies(test_config East)
+target_link_libraries(test_config East)
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

@@ -2,7 +2,7 @@
  * @Author: Xudong0722
  * @Date: 2025-03-04 23:38:57
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-04 23:41:52
+ * @Last Modified time: 2025-03-05 23:10:03
  */
 
 #pragma once
@@ -48,6 +48,7 @@ namespace East
         Logger::sptr getLogger(const std::string &name);
 
         void init();
+        Logger::sptr getRoot() { return m_root; }
 
     private:
         std::map<std::string, Logger::sptr> m_loggers;
