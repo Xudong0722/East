@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -g -std=c++17 -Wall -Wno-depre
 #     East/src/log.cc
 #     East/src/util.cc)
 
-add_subdirectory(East/src)
+add_subdirectory(East)
 
 #ADD_LIBRARY(East SHARED ${LIB_SRC})
 add_executable(test tests/test.cc)
