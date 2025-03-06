@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.26)
 project(East VERSION 1.0)
 
+
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
@@ -17,3 +18,4 @@ add_library(${LIBRARY_NAME} SHARED ${DIR_LIB_SRCS})
 #add_library(${LIBRARY_NAME} SHARED ${SRC_FILES})
 
 target_include_directories(${LIBRARY_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include)
+#target_link_libraries(${LIBRARY_NAME} PUBLIC yaml-cpp::yaml-cpp)

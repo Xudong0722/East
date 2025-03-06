@@ -7,6 +7,14 @@
 
 #include "../East/include/Config.h"
 #include "../East/include/Elog.h"
+#include <yaml-cpp/yaml.h>
+
+void test_yml()
+{
+    YAML::Node root = YAML::LoadFile("/elvis/East/bin/conf/log.yml");
+
+    ELOG_INFO(ELOG_ROOT()) << root;
+}
 
 int main()
 {
@@ -16,5 +24,6 @@ int main()
     ELOG_INFO(ELOG_ROOT()) << g_int_value_config->getName() << " " << g_int_value_config->getDescription();
     ELOG_INFO(ELOG_ROOT()) << g_int_value_config->toString() << " " << g_int_value_config->getValue();
 
+    test_yml();
     return 0;
 }
