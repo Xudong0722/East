@@ -26,7 +26,7 @@ add_subdirectory(East)
 #ADD_LIBRARY(East SHARED ${LIB_SRC})
 add_executable(test tests/test.cc)
 add_dependencies(test East)
-target_link_libraries(test East)
+target_link_libraries(test East yaml-cpp)
 
 add_executable(test_config tests/test_config.cc)
 #add_dependencies(test_config East)

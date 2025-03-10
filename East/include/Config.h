@@ -10,7 +10,10 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <list>
+#include <iostream> //test
 #include <boost/lexical_cast.hpp>
+#include <yaml-cpp/yaml.h>
 #include "Elog.h"
 #include "util.h"
 
@@ -26,7 +29,9 @@ namespace East
         using sptr = std::shared_ptr<ConfigVarBase>;
 
         ConfigVarBase(const std::string &name, const std::string &description = "")
-            : m_name(name), m_description(description) {}
+            : m_name(name), m_description(description) {
+                std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::tolower);
+            }
         virtual ~ConfigVarBase() {}
 
         const std::string &getName() const { return m_name; }
@@ -40,7 +45,56 @@ namespace East
         std::string m_description;
     };
 
-    template <class T>
+    template<class F, class T>
+    class LexicalCast
+    { 
+    public:
+        T operator()(const F& v)
+        {
+            return boost::lexical_cast<T>(v);
+        }
+    };
+
+    //support string -> vector
+    template<class T>
+    class LexicalCast<std::string, std::vector<T>>
+    {
+    public:
+        std::vector<T> operator()(const std::string& str)
+        {
+            YAML::Node node = YAML::Load(str);
+            typename std::vector<T> res{};
+            std::stringstream ss;
+            for(auto i = 0u; i < node.size(); ++i)
+            {
+                ss.str("");
+                ss << node[i];
+                res.emplace_back(LexicalCast<std::string, T>()(ss.str()));
+            }
+            return res;
+        }
+    };
+
+    //support vector -> string
+    template<class T>
+    class LexicalCast<std::vector<T>, std::string>
+    {
+    public:
+        std::string operator()(const std::vector<T>& vec)
+        {
+            YAML::Node node(YAML::NodeType::Sequence);
+            for(const auto& x : vec)
+            {
+                node.push_back(YAML::Load(LexicalCast<T, std::string>()(x)));
+            }
+            std::stringstream ss;
+            ss << node;
+            return ss.str();
+        }
+    };
+
+
+    template <class T, class FromStr = LexicalCast<std::string, T>, class ToStr = LexicalCast<T, std::string>>
     class ConfigVar : public ConfigVarBase
     {
     public:
@@ -54,7 +108,8 @@ namespace East
         {
             try
             {
-                return boost::lexical_cast<std::string>(m_val);
+                // return boost::lexical_cast<std::string>(m_val);
+                return ToStr()(m_val);
             }
             catch (std::exception &e)
             {
@@ -68,7 +123,8 @@ namespace East
         {
             try
             {
-                m_val = boost::lexical_cast<T>(str);
+                // m_val = boost::lexical_cast<T>(str);
+                setValue(FromStr()(str));
                 return true;
             }
             catch (std::exception &e)
@@ -80,6 +136,7 @@ namespace East
         }
 
         const T &getValue() const { return m_val; }
+        void setValue(const T& t) { m_val = t; }
 
     private:
         T m_val;
@@ -108,7 +165,7 @@ namespace East
             }
 
             // name only support alpha '.' '_' and num
-            if (name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ._0123456789") != std::string::npos)
+            if (name.find_first_not_of("abcdefghijklmnopqrstuvwxyz._0123456789") != std::string::npos)
             {
                 ELOG_ERROR(ELOG_ROOT()) << "Lookup name invalid " << name;
                 throw std::invalid_argument(name);
@@ -127,6 +184,10 @@ namespace East
             return std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
         }
 
+        static ConfigVarBase::sptr LoopupBase(const std::string& name);
+        static void ListAllMember(const std::string& prefix, const YAML::Node& node, 
+            std::list<std::pair<std::string, const YAML::Node>>& output);
+        static void LoadFromYML(const YAML::Node& root);
     private:
         static ConfigVarMap s_datas;
     };

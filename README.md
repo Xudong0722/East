@@ -33,5 +33,22 @@ tests -- 测试代码路径
 
 ## 配置系统
 
+基于yaml实现配置系统，如日志格式，日志输出
+基本原则：约定优于配置
 
+依赖：yaml-cpp
+Type:
+Undefined = 0,
+Null = 1,
+Scalar = 2,
+Sequence = 3,
+Map = 4
+
+```
+ConfigVarBase(抽象基类，提供配置项的接口) --> ConfigVar<T> (派生类，同时是模板类，因为配置项的属性可能不一样，整数/浮点数/字符串...)
+                        |
+                        |
+                      Config(存储所有的配置项，并且对外提供了Loopup接口，同时支持从YML中读取更新配置)
+
+```
 ## 协程库开发 

@@ -56,6 +56,18 @@
         "ratio": "cpp",
         "semaphore": "cpp",
         "stop_token": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "any": "cpp",
+        "strstream": "cpp",
+        "complex": "cpp",
+        "cstring": "cpp",
+        "forward_list": "cpp",
+        "set": "cpp",
+        "unordered_set": "cpp",
+        "iomanip": "cpp",
+        "cfenv": "cpp",
+        "cinttypes": "cpp",
+        "valarray": "cpp",
+        "variant": "cpp"
     }
 }
