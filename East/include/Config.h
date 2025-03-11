@@ -11,7 +11,10 @@
 #include <map>
 #include <memory>
 #include <list>
-#include <iostream> //test
+#include <vector>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
 #include <boost/lexical_cast.hpp>
 #include <yaml-cpp/yaml.h>
 #include "Elog.h"
@@ -29,9 +32,10 @@ namespace East
         using sptr = std::shared_ptr<ConfigVarBase>;
 
         ConfigVarBase(const std::string &name, const std::string &description = "")
-            : m_name(name), m_description(description) {
-                std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::tolower);
-            }
+            : m_name(name), m_description(description)
+        {
+            std::transform(m_name.begin(), m_name.end(), m_name.begin(), ::tolower);
+        }
         virtual ~ConfigVarBase() {}
 
         const std::string &getName() const { return m_name; }
@@ -45,27 +49,27 @@ namespace East
         std::string m_description;
     };
 
-    template<class F, class T>
+    template <class F, class T>
     class LexicalCast
-    { 
+    {
     public:
-        T operator()(const F& v)
+        T operator()(const F &v)
         {
             return boost::lexical_cast<T>(v);
         }
     };
 
-    //support string -> vector
-    template<class T>
+    // support string -> vector
+    template <class T>
     class LexicalCast<std::string, std::vector<T>>
     {
     public:
-        std::vector<T> operator()(const std::string& str)
+        std::vector<T> operator()(const std::string &str)
         {
             YAML::Node node = YAML::Load(str);
-            typename std::vector<T> res{};
+            std::vector<T> res{};
             std::stringstream ss;
-            for(auto i = 0u; i < node.size(); ++i)
+            for (auto i = 0u; i < node.size(); ++i)
             {
                 ss.str("");
                 ss << node[i];
@@ -75,15 +79,15 @@ namespace East
         }
     };
 
-    //support vector -> string
-    template<class T>
+    // support vector -> string
+    template <class T>
     class LexicalCast<std::vector<T>, std::string>
     {
     public:
-        std::string operator()(const std::vector<T>& vec)
+        std::string operator()(const std::vector<T> &vec)
         {
             YAML::Node node(YAML::NodeType::Sequence);
-            for(const auto& x : vec)
+            for (const auto &x : vec)
             {
                 node.push_back(YAML::Load(LexicalCast<T, std::string>()(x)));
             }
@@ -93,6 +97,158 @@ namespace East
         }
     };
 
+    // support string -> list
+    template <class T>
+    class LexicalCast<std::string, std::list<T>>
+    {
+    public:
+        std::list<T> operator()(const std::string &str)
+        {
+            YAML::Node node = YAML::Load(str);
+            std::list<T> res{};
+            std::stringstream ss;
+            for (auto i = 0u; i < node.size(); ++i)
+            {
+                ss.str("");
+                ss << node[i];
+                res.emplace_back(LexicalCast<std::string, T>()(ss.str()));
+            }
+            return res;
+        }
+    };
+
+    // support list -> string
+    template <class T>
+    class LexicalCast<std::list<T>, std::string>
+    {
+    public:
+        std::string operator()(const std::list<T> &vec)
+        {
+            YAML::Node node(YAML::NodeType::Sequence);
+            for (const auto &x : vec)
+            {
+                node.push_back(YAML::Load(LexicalCast<T, std::string>()(x)));
+            }
+            std::stringstream ss;
+            ss << node;
+            return ss.str();
+        }
+    };
+
+    // support string -> set
+    template <class T>
+    class LexicalCast<std::string, std::set<T>>
+    {
+    public:
+        std::set<T> operator()(const std::string &str)
+        {
+            YAML::Node node = YAML::Load(str);
+            std::set<T> res{};
+            std::stringstream ss;
+            for (auto i = 0u; i < node.size(); ++i)
+            {
+                ss.str("");
+                ss << node[i];
+                res.insert(LexicalCast<std::string, T>()(ss.str()));
+            }
+            return res;
+        }
+    };
+
+    // support set -> string
+    template <class T>
+    class LexicalCast<std::set<T>, std::string>
+    {
+    public:
+        std::string operator()(const std::set<T> &vec)
+        {
+            YAML::Node node(YAML::NodeType::Sequence);
+            for (const auto &x : vec)
+            {
+                node.push_back(YAML::Load(LexicalCast<T, std::string>()(x)));
+            }
+            std::stringstream ss;
+            ss << node;
+            return ss.str();
+        }
+    };
+
+    // support string -> unordered_set
+    template <class T>
+    class LexicalCast<std::string, std::unordered_set<T>>
+    {
+    public:
+        std::unordered_set<T> operator()(const std::string &str)
+        {
+            YAML::Node node = YAML::Load(str);
+            std::unordered_set<T> res{};
+            std::stringstream ss;
+            for (auto i = 0u; i < node.size(); ++i)
+            {
+                ss.str("");
+                ss << node[i];
+                res.insert(LexicalCast<std::string, T>()(ss.str()));
+            }
+            return res;
+        }
+    };
+
+    // support unordered_set -> string
+    template <class T>
+    class LexicalCast<std::unordered_set<T>, std::string>
+    {
+    public:
+        std::string operator()(const std::unordered_set<T> &vec)
+        {
+            YAML::Node node(YAML::NodeType::Sequence);
+            for (const auto &x : vec)
+            {
+                node.push_back(YAML::Load(LexicalCast<T, std::string>()(x)));
+            }
+            std::stringstream ss;
+            ss << node;
+            return ss.str();
+        }
+    };
+
+    // support string -> map<string, T>
+    template <class T>
+    class LexicalCast<std::string, std::map<std::string, T>>
+    {
+    public:
+        std::map<std::string, T> operator()(const std::string &str)
+        {
+            YAML::Node node = YAML::Load(str);
+            std::map<std::string, T> res{};
+            std::stringstream ss;
+            for (auto it = node.begin();
+                 it != node.end(); ++it)
+            {
+                ss.str("");
+                ss << it->second;
+                res.emplace(it->first.Scalar(), LexicalCast<std::string, T>()(ss.str()));
+            }
+            return res;
+        }
+    };
+
+    // support map<string, T> -> string
+    template <class T>
+    class LexicalCast<std::map<std::string, T>, std::string>
+    {
+    public:
+        std::string operator()(const std::map<std::string, T> &mp)
+        {
+            YAML::Node node(YAML::NodeType::Map);
+            for (const auto &[k, v] : mp)
+            {
+                node[k] = YAML::Load(LexicalCast<T, std::string>()(v));
+            }
+            std::stringstream ss;
+            ss << node;
+            return ss.str();
+        }
+    };
 
     template <class T, class FromStr = LexicalCast<std::string, T>, class ToStr = LexicalCast<T, std::string>>
     class ConfigVar : public ConfigVarBase
@@ -136,7 +292,7 @@ namespace East
         }
 
         const T &getValue() const { return m_val; }
-        void setValue(const T& t) { m_val = t; }
+        void setValue(const T &t) { m_val = t; }
 
     private:
         T m_val;
@@ -184,10 +340,11 @@ namespace East
             return std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
         }
 
-        static ConfigVarBase::sptr LoopupBase(const std::string& name);
-        static void ListAllMember(const std::string& prefix, const YAML::Node& node, 
-            std::list<std::pair<std::string, const YAML::Node>>& output);
-        static void LoadFromYML(const YAML::Node& root);
+        static ConfigVarBase::sptr LoopupBase(const std::string &name);
+        static void ListAllMember(const std::string &prefix, const YAML::Node &node,
+                                  std::list<std::pair<std::string, const YAML::Node>> &output);
+        static void LoadFromYML(const YAML::Node &root);
+
     private:
         static ConfigVarMap s_datas;
     };
