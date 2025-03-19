@@ -48,7 +48,7 @@ namespace East
         LoggerNameFormatItem(const std::string &__ = "") {}
         void format(std::ostream &os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override
         {
-            os << logger->getName();
+            os << event->getLogger()->getName();
         }
     };
 
@@ -154,6 +154,7 @@ namespace East
     LogFormatter::LogFormatter(const std::string &pattern)
         : m_pattern(pattern)
     {
+        m_has_error = false;
         init();
     }
 
@@ -248,6 +249,7 @@ namespace East
             {
                 // std::cout << "Parse error " << m_pattern.substr(i) << '\n';
                 vec_pattern.emplace_back(std::make_tuple("<error parse>", fmt, 0));
+                m_has_error = true;
                 break;
             }
         }
@@ -310,6 +312,7 @@ namespace East
                 if (cit == s_format_items.end())
                 {
                     m_items.emplace_back(std::make_shared<NormalStringFormatItem>("<<error_format %" + std::get<0>(item) + ">>"));
+                    m_has_error = true;
                 }
                 else
                 {
@@ -321,4 +324,8 @@ namespace East
         }
     }
 
+    bool LogFormatter::hasError()
+    {
+        return m_has_error;
+    }
 }

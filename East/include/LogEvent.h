@@ -26,6 +26,7 @@ namespace East
             FATAL = 5,
         };
         static const char *toStr(Level level);
+        static Level fromStr(const std::string& str);
     };
 
     class LogEvent

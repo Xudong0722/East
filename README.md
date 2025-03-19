@@ -37,19 +37,14 @@ tests -- 测试代码路径
 基本原则：约定优于配置
 
 依赖：yaml-cpp
-Type:
-Undefined = 0,
-Null = 1,
-Scalar = 2,
-Sequence = 3,
-Map = 4
 
 ```
-ConfigVarBase(抽象基类，提供配置项的接口) --> ConfigVar<T> (派生类，同时是模板类，因为配置项的属性可能不一样，整数/浮点数/字符串...)
+ConfigVarBase(抽象基类，提供配置项的接口) --> ConfigVar<T> (派生类，同时是模板类，因为配置项的属性可能不一样，整数/浮点数/字符串...， 支持增加监听回调，在值有变化的时候会触发）
                         |
                         |
                       Config(存储所有的配置项，并且对外提供了Loopup接口，同时支持从YML中读取更新配置)
 
 目前支持基本的stl容器：vector, list, set, unordered_set, map, unordered_map
+    如果是自定义类型，需要特化LexicalCast以支持自定义类和字符串之间的相互转换！
 ```
 ## 协程库开发 

@@ -8,6 +8,7 @@
 #pragma once
 #include <list>
 #include <map>
+#include <vector>
 #include "LogEvent.h"
 #include "singleton.h"
 namespace East
@@ -33,6 +34,11 @@ namespace East
 
         void addAppender(std::shared_ptr<LogAppender> appender);
         void delAppender(std::shared_ptr<LogAppender> appender);
+        void clearAppenders();
+
+        std::shared_ptr<LogFormatter> getFormatter() const;
+        void setFormatter(std::shared_ptr<LogFormatter> fomatter);
+        void setFormatter(const std::string& pattern);
 
     private:
         std::string m_name;      // log name
@@ -45,6 +51,9 @@ namespace East
     {
     public:
         LoggerMgr();
+        /// @brief Get Logger by name, if logger is not exist, we will create a new logger
+        /// @param name 
+        /// @return shared_ptr to logger
         Logger::sptr getLogger(const std::string &name);
 
         void init();
@@ -55,4 +64,54 @@ namespace East
         Logger::sptr m_root;
     };
     using LogMgr = East::Singleton<LoggerMgr>;
+
+    enum class LogAppenderType
+    {
+        NONE = 0,
+        FILE = 1,
+        STANDARD = 2,
+    };
+
+    //from log.yml
+    struct LogAppenderConfigInfo
+    {
+        LogAppenderType type{LogAppenderType::NONE};
+        LogLevel::Level level{LogLevel::Level::NONE};
+        std::string file_path;
+        std::string formatter;
+
+        bool operator==(const LogAppenderConfigInfo& rhs) const 
+        {
+            return type == rhs.type
+                && level == rhs.level
+                && file_path == rhs.file_path
+                && formatter == rhs.formatter;
+        }
+    };
+
+    struct LoggerConfigInfo
+    {
+        std::string name;
+        LogLevel::Level level{LogLevel::Level::NONE};
+        std::string formatter;
+        std::vector<LogAppenderConfigInfo> log_appenders;
+
+        bool operator==(const LoggerConfigInfo& rhs) const 
+        {
+            return name == rhs.name
+                && level == rhs.level
+                && formatter == rhs.formatter
+                && log_appenders == rhs.log_appenders;
+        }
+
+        bool operator<(const LoggerConfigInfo& rhs) const  
+        {
+            return name < rhs.name;
+        }
+    };
+
+    struct LogInitiator
+    {
+        LogInitiator();
+    };
 }

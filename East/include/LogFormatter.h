@@ -20,7 +20,7 @@ namespace East
         using sptr = std::shared_ptr<LogFormatter>;
         LogFormatter(const std::string &pattern);
         std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event);
-
+        
     public:
         class FormatItem
         {
@@ -32,8 +32,9 @@ namespace East
         };
 
         void init();
-
+        bool hasError();
     private:
+        bool m_has_error;
         std::string m_pattern;
         std::vector<FormatItem::sptr> m_items;
     };

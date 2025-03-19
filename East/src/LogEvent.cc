@@ -17,6 +17,27 @@ namespace East
         return str_levels[level];
     }
 
+    LogLevel::Level LogLevel::fromStr(const std::string& str)
+    {
+        if("DEBUG" == str)
+        {
+            return Level::DEBUG;
+        }else if("INFO" == str)
+        {
+            return Level::INFO;
+        }else if("WARN" == str)
+        {
+            return Level::WARN;
+        }else if("ERROR" == str)
+        {
+            return Level::ERROR;
+        }else if("FATAL" == str)
+        {
+            return Level::FATAL;
+        }
+        return Level::NONE;
+    }
+
     LogEvent::LogEvent(std::shared_ptr<Logger> logger,
                        LogLevel::Level level,
                        const char *file,

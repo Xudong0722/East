@@ -20,6 +20,9 @@
 #include "Elog.h"
 #include "util.h"
 
+//Listener ID
+#define LOG_INITIATOR_CALLBACK_ID 0x1LL
+
 namespace East
 {
     /*
@@ -43,6 +46,7 @@ namespace East
 
         virtual std::string toString() = 0;
         virtual bool fromString(const std::string &str) = 0;
+        virtual std::string getTypeName() const = 0;
 
     private:
         std::string m_name;
@@ -250,11 +254,51 @@ namespace East
         }
     };
 
+    // support string -> unordered_map<string, T>
+    template <class T>
+    class LexicalCast<std::string, std::unordered_map<std::string, T>>
+    {
+    public:
+        std::unordered_map<std::string, T> operator()(const std::string &str)
+        {
+            YAML::Node node = YAML::Load(str);
+            std::unordered_map<std::string, T> res{};
+            std::stringstream ss;
+            for (auto it = node.begin();
+                    it != node.end(); ++it)
+            {
+                ss.str("");
+                ss << it->second;
+                res.emplace(it->first.Scalar(), LexicalCast<std::string, T>()(ss.str()));
+            }
+            return res;
+        }
+    };
+
+    // support unordered_map<string, T> -> string
+    template <class T>
+    class LexicalCast<std::unordered_map<std::string, T>, std::string>
+    {
+    public:
+        std::string operator()(const std::unordered_map<std::string, T> &mp)
+        {
+            YAML::Node node(YAML::NodeType::Map);
+            for (const auto &[k, v] : mp)
+            {
+                node[k] = YAML::Load(LexicalCast<T, std::string>()(v));
+            }
+            std::stringstream ss;
+            ss << node;
+            return ss.str();
+        }
+    };
+
     template <class T, class FromStr = LexicalCast<std::string, T>, class ToStr = LexicalCast<T, std::string>>
     class ConfigVar : public ConfigVarBase
     {
     public:
         using sptr = std::shared_ptr<ConfigVar>;
+        using listener = std::function<void(const T& old_v, const T& new_v)>;
         ConfigVar(const std::string &name, const T &val, const std::string &description = "")
             : ConfigVarBase(name, description), m_val(val)
         {
@@ -291,11 +335,43 @@ namespace East
             return false;
         }
 
+        std::string getTypeName() const override { return typeid(T).name(); }
+
         const T &getValue() const { return m_val; }
-        void setValue(const T &t) { m_val = t; }
+        void setValue(const T &t)
+        {
+            if(t == m_val) return ;
+            for(const auto& [_, cb] : m_cbs)
+            {
+                cb(m_val, t);
+            }
+            m_val = t;
+        }
+        
+        void addListener(uint64_t key, listener cb)
+        {
+            m_cbs[key] = cb;
+        }
+
+        void delListener(uint64_t key)
+        {
+            m_cbs.erase(key);
+        }
+
+        listener getListener(uint64_t key)
+        {
+            return m_cbs[key];
+        }
+
+        void clearAllListeners()
+        {
+            m_cbs.clear();
+        }
 
     private:
         T m_val;
+        //std::function not support operator==, we can ues map to store all the callbacks
+        std::map<uint64_t, listener> m_cbs;
     };
 
     /*
@@ -313,11 +389,27 @@ namespace East
         template <class T>
         static typename ConfigVar<T>::sptr Lookup(const std::string &name, const T &default_val, const std::string description = "")
         {
-            auto res = Lookup<T>(name);
-            if (nullptr != res)
+            // auto res = Lookup<T>(name);  
+            // if (nullptr != res)                  // Maybe same key, different data type, we need to prevent this case
+            // {
+            //     ELOG_INFO(ELOG_ROOT()) << " Lookup name: " << name << " exists";
+            //     return res;
+            // }
+
+            auto it = s_datas.find(name);
+            if(it != s_datas.end())
             {
-                ELOG_INFO(ELOG_ROOT()) << " Lookup name: " << name << " exists";
-                return res;
+                auto item = std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
+                if(nullptr == item)
+                {
+                    ELOG_ERROR(ELOG_ROOT()) << "Exists but the type not match, existed item's type: " << it->second->getTypeName() 
+                        << ", current type is: " << typeid(T).name();
+                    return nullptr;
+                }else
+                {
+                    ELOG_INFO(ELOG_ROOT()) << "Existed!";
+                    return item;
+                }
             }
 
             // name only support alpha '.' '_' and num

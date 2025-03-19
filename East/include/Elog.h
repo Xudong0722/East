@@ -26,3 +26,4 @@
 #define ELOG_FATAL(logger) ELOG_LEVEL(logger, East::LogLevel::FATAL)
 
 #define ELOG_ROOT() East::LogMgr::GetInst()->getRoot()
+#define ELOG_NAME(name) East::LogMgr::GetInst()->getLogger(name)
