@@ -40,11 +40,14 @@ namespace East
         void setFormatter(std::shared_ptr<LogFormatter> fomatter);
         void setFormatter(const std::string& pattern);
 
+        void setRoot(Logger::sptr root) { m_root = root; }
+        std::string toYamlString();
     private:
         std::string m_name;      // log name
         LogLevel::Level m_level; // log level(output when event level >= m_level)
         std::list<std::shared_ptr<LogAppender>> m_appenders;
         std::shared_ptr<LogFormatter> m_formatter;
+        Logger::sptr m_root;
     };
 
     class LoggerMgr
@@ -59,6 +62,7 @@ namespace East
         void init();
         Logger::sptr getRoot() { return m_root; }
 
+        std::string toYamlString();
     private:
         std::map<std::string, Logger::sptr> m_loggers;
         Logger::sptr m_root;
@@ -107,6 +111,15 @@ namespace East
         bool operator<(const LoggerConfigInfo& rhs) const  
         {
             return name < rhs.name;
+        }
+
+        std::string toString() const
+        {
+            std::stringstream ss;
+            ss << "Logger name: " << name
+               << ", level: " << LogLevel::toStr(level)
+               << ", formatter: " << formatter;
+            return ss.str();
         }
     };
 

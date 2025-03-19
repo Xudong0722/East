@@ -16,19 +16,21 @@ namespace East
     class LogFormatter;
     class LogAppender
     {
+    friend class Logger;
     public:
         using sptr = std::shared_ptr<LogAppender>;
         virtual ~LogAppender() {}
 
         virtual void Log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) = 0;
-
-        void setFormatter(std::shared_ptr<LogFormatter> formatter) { m_formatter = formatter; }
-        std::shared_ptr<LogFormatter> getFormatter() const { return m_formatter; }
+        virtual std::string toYamlString() = 0;
+        void setFormatter(std::shared_ptr<LogFormatter> formatter);
+        std::shared_ptr<LogFormatter> getFormatter() const;
 
         void setLevel(LogLevel::Level level) { m_level = level; }
         LogLevel::Level getLevel() const { return m_level; }
 
     protected:
+        bool m_has_formatter{false};
         LogLevel::Level m_level{LogLevel::DEBUG};
         std::shared_ptr<LogFormatter> m_formatter;
     };
@@ -38,6 +40,7 @@ namespace East
     public:
         using sptr = std::shared_ptr<StdoutLogAppender>;
         void Log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override;
+        std::string toYamlString() override;
     };
 
     class FileLogAppender : public LogAppender
@@ -47,6 +50,7 @@ namespace East
         FileLogAppender(const std::string &filename);
         ~FileLogAppender();
         void Log(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) override;
+        std::string toYamlString() override;
 
         bool reopen(); // TODO, Why add this api?
     private:

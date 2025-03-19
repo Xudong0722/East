@@ -33,6 +33,8 @@ namespace East
 
         void init();
         bool hasError();
+        std::string getPattern();
+        
     private:
         bool m_has_error;
         std::string m_pattern;

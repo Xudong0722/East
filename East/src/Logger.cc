@@ -24,13 +24,20 @@ namespace East
         if (level < m_level)
             return;
         auto self = shared_from_this();
-        for (auto &appender : m_appenders)
+        if(!m_appenders.empty())
         {
-            if (nullptr != appender)
+            for (auto &appender : m_appenders)
             {
-                appender->Log(self, level, event);
+                if (nullptr != appender)
+                {
+                    appender->Log(self, level, event);
+                }
             }
+        }else {
+            if(nullptr != m_root)
+                m_root->Log(level, event);
         }
+
     }
 
     void Logger::debug(LogEvent::sptr event)
@@ -108,21 +115,55 @@ namespace East
     void Logger::setFormatter(const std::string &pattern)
     {
         std::shared_ptr<LogFormatter> new_formatter = std::make_shared<LogFormatter>(pattern);
-        if (nullptr != new_formatter)
-            return;
-        if (new_formatter->hasError())
-            return;
+        if (nullptr == new_formatter || new_formatter->hasError()) return ;
+        setFormatter(new_formatter);
+    }
+
+    std::string Logger::toYamlString()
+    {
+        YAML::Node node{};
+
+        node["name"] = m_name;
+        if(m_level != LogLevel::NONE)
+            node["level"] = LogLevel::toStr(m_level);
+        
+        if(nullptr != m_formatter)
+            node["formatter"] = m_formatter->getPattern();
+        
+        for(const auto& ap : m_appenders)
+            node["appenders"].push_back(YAML::Load(ap->toYamlString()));
+        
+        std::stringstream ss;
+        ss << node;
+        return ss.str();
     }
 
     LoggerMgr::LoggerMgr()
     {
         m_root.reset(new Logger);
         m_root->addAppender(std::make_shared<StdoutLogAppender>());
+
+        m_loggers.emplace(m_root->getName(), m_root);
         init();
     }
 
     void LoggerMgr::init()
     {
+    }
+
+    std::string LoggerMgr::toYamlString()
+    {
+        YAML::Node node{};
+        
+        for(const auto& [_, logger] : m_loggers)
+        {
+            if(nullptr == logger) continue;
+            node.push_back(YAML::Load(logger->toYamlString()));
+        }
+
+        std::stringstream ss;
+        ss << node;
+        return ss.str();
     }
 
     Logger::sptr LoggerMgr::getLogger(const std::string &name)
@@ -131,6 +172,7 @@ namespace East
         if (it == m_loggers.end())
         {
             Logger::sptr new_logger = std::make_shared<Logger>(name);
+            new_logger->setRoot(m_root);
             m_loggers.emplace(name, new_logger);
             return new_logger;
         }
@@ -163,7 +205,7 @@ namespace East
                 
                 if(!ap.formatter.empty())
                     ap_node["formatter"] = ap.formatter;
-                node["appender"].push_back(ap_node);
+                node["appenders"].push_back(ap_node);
             }
             std::stringstream ss;
             ss << node;
@@ -188,12 +230,12 @@ namespace East
             logger_config.name = node["name"].as<std::string>();
             logger_config.level = LogLevel::fromStr(node["level"].IsDefined() ? node["level"].as<std::string>() : "");
             logger_config.formatter = node["formatter"].IsDefined() ? node["formatter"].as<std::string>() : "";
-
-            if (node["appender"].IsDefined())
+            std::cout << "string->LoggerConfigInfo" <<"--------------" << logger_config.name <<" " << logger_config.formatter << std::endl;
+            if (node["appenders"].IsDefined())
             {
-                for (size_t i = 0; i < node["appender"].size(); ++i)
+                for (size_t i = 0; i < node["appenders"].size(); ++i)
                 {
-                    auto appender = node["appender"][i];
+                    auto appender = node["appenders"][i];
                     if (!appender["type"].IsDefined())
                     {
                         std::cout << "Log appender error: type is null, " << appender << std::endl;
@@ -237,7 +279,11 @@ namespace East
     {
         g_log_config->addListener(LOG_INITIATOR_CALLBACK_ID, [](const std::set<LoggerConfigInfo> &old_v, const std::set<LoggerConfigInfo> &new_v)
                                   {
-            ELOG_INFO(ELOG_ROOT()) << "on log config changed";
+            ELOG_INFO(ELOG_ROOT()) << "on log config changed, old size: " << old_v.size() <<", new size: " << new_v.size();
+            for(const auto& item : new_v)
+            {
+                std::cout << item.toString() << std::endl;
+            }
             //1.add 2.del 3.modify
             for(const auto& item : new_v)
             {
@@ -246,12 +292,13 @@ namespace East
                 if(it == old_v.end())
                 {
                     //add event
-                    logger = ELOG_NAME(it->name);
+                    logger = ELOG_NAME(item.name);
+                    std::cout << __FUNCTION__ <<" item name: " << item.name << ", logger name: " << logger->getName() << std::endl;
                 }else {
                     if(!(*it == item))
                     {
                         //modify event
-                        logger = ELOG_NAME(it->name);
+                        logger = ELOG_NAME(item.name);
                     }else{
                         continue;
                     }

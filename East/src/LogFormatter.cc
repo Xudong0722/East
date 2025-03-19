@@ -328,4 +328,9 @@ namespace East
     {
         return m_has_error;
     }
+
+    std::string LogFormatter::getPattern()
+    {
+        return m_pattern;
+    }
 }

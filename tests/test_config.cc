@@ -8,6 +8,7 @@
 #include "../East/include/Config.h"
 #include "../East/include/Elog.h"
 #include <yaml-cpp/yaml.h>
+#include <iostream>
 
 East::ConfigVar<int>::sptr g_int_value_config =
     East::Config::Lookup("system.port", (int)8080, "system port");
@@ -184,8 +185,14 @@ void test_config()
 
 void test_log()
 {
+    East::Logger::sptr system_log = ELOG_NAME("system");
+    ELOG_INFO(system_log) << "Hello system";
+    std::cout << East::LogMgr::GetInst()->toYamlString() << std::endl;
     YAML::Node root = YAML::LoadFile("/elvis/East/bin/conf/log.yml");
     East::Config::LoadFromYML(root);
+    std::cout <<"================================\n";
+    std::cout << East::LogMgr::GetInst()->toYamlString() << std::endl;
+    ELOG_INFO(system_log) << "Hello system";
 }
 
 int main()

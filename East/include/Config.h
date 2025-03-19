@@ -396,8 +396,8 @@ namespace East
             //     return res;
             // }
 
-            auto it = s_datas.find(name);
-            if(it != s_datas.end())
+            auto it = GetDatas().find(name);
+            if(it != GetDatas().end())
             {
                 auto item = std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
                 if(nullptr == item)
@@ -419,15 +419,15 @@ namespace East
                 throw std::invalid_argument(name);
             }
             auto new_item = std::make_shared<ConfigVar<T>>(name, default_val, description);
-            s_datas[name] = new_item;
+            GetDatas()[name] = new_item;
             return new_item;
         }
 
         template <class T>
         static typename ConfigVar<T>::sptr Lookup(const std::string &name)
         {
-            auto it = s_datas.find(name);
-            if (it == s_datas.end())
+            auto it = GetDatas().find(name);
+            if (it == GetDatas().end())
                 return nullptr;
             return std::dynamic_pointer_cast<ConfigVar<T>>(it->second);
         }
@@ -438,6 +438,10 @@ namespace East
         static void LoadFromYML(const YAML::Node &root);
 
     private:
-        static ConfigVarMap s_datas;
+        static ConfigVarMap& GetDatas()
+        {
+            static ConfigVarMap s_datas;
+            return s_datas;
+        }
     };
 } // namespace East

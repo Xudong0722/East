@@ -19,19 +19,19 @@ namespace East
 
     LogLevel::Level LogLevel::fromStr(const std::string& str)
     {
-        if("DEBUG" == str)
+        if("DEBUG" == str || "debug" == str)
         {
             return Level::DEBUG;
-        }else if("INFO" == str)
+        }else if("INFO" == str || "info" == str)
         {
             return Level::INFO;
-        }else if("WARN" == str)
+        }else if("WARN" == str || "warn" == str)
         {
             return Level::WARN;
-        }else if("ERROR" == str)
+        }else if("ERROR" == str || "error" == str)
         {
             return Level::ERROR;
-        }else if("FATAL" == str)
+        }else if("FATAL" == str || "fatal" == str)
         {
             return Level::FATAL;
         }
