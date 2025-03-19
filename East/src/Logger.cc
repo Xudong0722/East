@@ -107,8 +107,9 @@ namespace East
         {
             if (nullptr == apd)
                 continue;
-            // TODO
-            apd->setFormatter(m_formatter);
+            //如果appender没有formatter，再设置进去
+            if(!apd->m_has_formatter)
+                apd->setFormatter(m_formatter);
         }
     }
 
