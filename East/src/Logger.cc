@@ -202,9 +202,7 @@ class LexicalCast<std::string, LoggerConfigInfo> {
     logger_config.formatter = node["formatter"].IsDefined()
                                   ? node["formatter"].as<std::string>()
                                   : "";
-    std::cout << "string->LoggerConfigInfo"
-              << "--------------" << logger_config.name << " "
-              << logger_config.formatter << std::endl;
+
     if (node["appenders"].IsDefined()) {
       for (size_t i = 0; i < node["appenders"].size(); ++i) {
         auto appender = node["appenders"][i];
@@ -250,9 +248,7 @@ LogInitiator::LogInitiator() {
         ELOG_INFO(ELOG_ROOT())
             << "on log config changed, old size: " << old_v.size()
             << ", new size: " << new_v.size();
-        for (const auto& item : new_v) {
-          std::cout << item.toString() << std::endl;
-        }
+
         //1.add 2.del 3.modify
         for (const auto& item : new_v) {
           auto it = old_v.find(item);
@@ -260,8 +256,6 @@ LogInitiator::LogInitiator() {
           if (it == old_v.end()) {
             //add event
             logger = ELOG_NAME(item.name);
-            std::cout << __FUNCTION__ << " item name: " << item.name
-                      << ", logger name: " << logger->getName() << std::endl;
           } else {
             if (!(*it == item)) {
               //modify event

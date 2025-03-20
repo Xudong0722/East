@@ -6,6 +6,7 @@
  */
 
 #pragma once
+#include <cstdarg>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -44,6 +45,9 @@ class LogEvent {
   std::shared_ptr<Logger> getLogger() { return m_logger; }
   std::stringstream& getSStream() { return m_ss; }
 
+  void format(const char* fmt, ...);
+  void format(const char* fmt, va_list al);
+
  private:
   const char* m_file{nullptr};  // 8 bytes on x64
   int32_t m_line{0};
@@ -63,6 +67,7 @@ class LogEventWrap {
   ~LogEventWrap();
 
   std::stringstream& getSStream();
+  LogEvent::sptr getEvent();
 
  private:
   LogEvent::sptr m_event;

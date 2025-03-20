@@ -31,5 +31,14 @@ int main()
     std::cout << "---------\n";
     auto logger1 = East::LogMgr::GetInst()->getLogger("test");
     ELOG_ERROR(logger1) << "test log";
+
+
+    std::cout <<"-------------test fmt log\n";
+
+    ELOG_FMT_DEBUG(logger, "%d%s%3f", 100, "stringstring", 3.1415926);
+    ELOG_FMT_INFO(logger, "%d%s%3f", 100, "stringstring", 3.1415926);
+    ELOG_FMT_WARN(logger, "%d%s%3f", 100, "stringstring", 3.1415926);
+    ELOG_FMT_FATAL(logger, "%d%s%3f", 100, "stringstring", 3.1415926);
+    ELOG_FMT_ERROR(logger, "%d%s%3f", 100, "stringstring", 3.1415926);
     return 0;
 }
