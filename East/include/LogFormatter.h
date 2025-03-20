@@ -6,38 +6,37 @@
  */
 
 #pragma once
-#include <string>
-#include <sstream>
-#include <vector>
 #include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
 #include "LogEvent.h"
 
-namespace East
-{
-    class LogFormatter
-    {
-    public:
-        using sptr = std::shared_ptr<LogFormatter>;
-        LogFormatter(const std::string &pattern);
-        std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event);
-        
-    public:
-        class FormatItem
-        {
-        public:
-            using sptr = std::shared_ptr<FormatItem>;
-            virtual ~FormatItem() {}
+namespace East {
+class LogFormatter {
+ public:
+  using sptr = std::shared_ptr<LogFormatter>;
+  LogFormatter(const std::string& pattern);
+  std::string format(std::shared_ptr<Logger> logger, LogLevel::Level level,
+                     LogEvent::sptr event);
 
-            virtual void format(std::ostream &os, std::shared_ptr<Logger> logger, LogLevel::Level level, LogEvent::sptr event) = 0;
-        };
+ public:
+  class FormatItem {
+   public:
+    using sptr = std::shared_ptr<FormatItem>;
+    virtual ~FormatItem() {}
 
-        void init();
-        bool hasError();
-        std::string getPattern();
-        
-    private:
-        bool m_has_error;
-        std::string m_pattern;
-        std::vector<FormatItem::sptr> m_items;
-    };
-}
+    virtual void format(std::ostream& os, std::shared_ptr<Logger> logger,
+                        LogLevel::Level level, LogEvent::sptr event) = 0;
+  };
+
+  void init();
+  bool hasError();
+  std::string getPattern();
+
+ private:
+  bool m_has_error;
+  std::string m_pattern;
+  std::vector<FormatItem::sptr> m_items;
+};
+}  // namespace East

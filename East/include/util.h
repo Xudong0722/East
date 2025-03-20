@@ -6,18 +6,17 @@
  */
 
 #pragma once
-#include <thread>
-#include <sstream>
-#include <string>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <sstream>
+#include <string>
+#include <thread>
 
-namespace East
-{
+namespace East {
 
-    // get os thread id for troubleshooting
-    pid_t getThreadId();
+// get os thread id for troubleshooting
+pid_t getThreadId();
 
-    uint32_t getFiberId();
+uint32_t getFiberId();
 
-} // namespace East
+}  // namespace East

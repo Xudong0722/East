@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.22)
 project(East VERSION 1.0)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -17,6 +17,13 @@ FetchContent_Declare(
     GIT_TAG master
 )
 FetchContent_MakeAvailable(yaml-cpp)
+
+file(GLOB_RECURSE ALL_SOURCE_FILES East/src/*.cc East/include/*.h)
+add_custom_target(
+    format
+    COMMAND clang-format -i ${ALL_SOURCE_FILES}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
 
 include_directories(${yaml-cpp_SOURCE_DIR}/include)
 add_subdirectory(East)
