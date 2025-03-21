@@ -18,7 +18,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(yaml-cpp)
 
-file(GLOB_RECURSE ALL_SOURCE_FILES East/src/*.cc East/include/*.h)
+find_library(PTHREAD pthread)
+
+file(GLOB_RECURSE ALL_SOURCE_FILES East/src/*.cc East/include/*.h tests/*.cc)
 add_custom_target(
     format
     COMMAND clang-format -i ${ALL_SOURCE_FILES}
@@ -28,6 +30,10 @@ add_custom_target(
 include_directories(${yaml-cpp_SOURCE_DIR}/include)
 add_subdirectory(East)
 
+set(LIBS 
+        East
+        pthread
+        yaml-cpp)
 #link_directories(${PROJECT_SOURCE_DIR}/bin)
 
 #ADD_LIBRARY(East SHARED ${LIB_SRC})
@@ -40,6 +46,10 @@ add_executable(test_config tests/test_config.cc)
 #add_dependencies(test_config yaml-cpp)
 target_link_libraries(test_config East)
 target_link_libraries(test_config yaml-cpp)
+
+
+add_executable(test_thread tests/test_thread.cc)
+target_link_libraries(test_thread "${LIBS}")
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

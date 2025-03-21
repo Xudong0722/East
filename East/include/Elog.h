@@ -2,7 +2,7 @@
  * @Author: Xudong0722
  * @Date: 2025-02-24 20:45:27
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-05 23:49:16
+ * @Last Modified time: 2025-03-21 12:04:33
  */
 
 #pragma once
@@ -11,6 +11,7 @@
 #include "LogFormatter.h"
 #include "Logger.h"
 #include "singleton.h"
+#include "util.h"
 
 // Log Macro
 #define ELOG_LEVEL(logger, level)                                    \

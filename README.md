@@ -49,7 +49,7 @@ Logger默认构造含有formatter和level，但是并没有默认的appender。
 依赖：yaml-cpp
 
 ```cpp
-ConfigVarBase(抽象基类，提供配置项的接口) --> ConfigVar<T>(派生类，同时是模板类，因为配置项的属性可能不一样，整数/浮点数/字符串...， 支持增加监听回调，在值有变化的时候会触发)
+ConfigVarBase(抽象基类，提供配置项的接口) --> ConfigVar<T>(派生类，同时是模板类，因为配置项的属性可能不一样，整数/浮点数/字符   串...， 支持增加监听回调，在值有变化的时候会触发)
                         |
                         |
                       Config(存储所有的配置项，并且对外提供了Lookup接口，同时支持从YML中读取更新配置)
@@ -68,4 +68,34 @@ static typename ConfigVar<T>::sptr Lookup( const std::string& name, const T& def
 
 1. 目前已经支持日志系统的配置解析及更新
 
-## 协程库开发 
+TODO：
+    m_has_formatter的语义不清晰
+
+## 线程库
+1.通过pthread封装了一个Thread类，因此我们可以给Thread添加一些额外的信息，例如，线程名称等
+```cpp
+相关知识点：
+pthread_create(); 
+pthread_join();
+pthread_detach();
+pthread_setname_np();
+
+thread_loack 关键字
+```
+
+2.信号量
+note:c++17已经支持shared_lock和unique_lock, 用于控制并发读写，但是我们还是自己封装一下。
+
+
+信号量(Semaphore):
+```cpp
+sem_init();   //初始化信号量个数，POSIX禁止设置负数。 注意，如果为0的话一般用于同步协作，大于0一般用于资源管理。在Thread中的信号量就是用于控制线程初始化顺序的
+sem_wait();   //如果信号量大于0，则减1后直接返回，否则阻塞当前线程，直到信号量大于0或者中断
+sem_post();   //将信号量加1，并且唤醒等待线程队列
+sem_destory(); //销毁信号量
+```
+
+3.互斥锁
+基于pthread_rwlock_t 封装了读锁和写锁
+## 协程库开
+
