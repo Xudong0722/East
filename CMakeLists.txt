@@ -51,5 +51,8 @@ target_link_libraries(test_config yaml-cpp)
 add_executable(test_thread tests/test_thread.cc)
 target_link_libraries(test_thread "${LIBS}")
 
+add_executable(test_util tests/test_util.cc)
+target_link_libraries(test_util "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
