@@ -11,11 +11,11 @@
 #include <string>
 #include "util.h"
 
-#define EAST_ASSERT(x)                                                   \
-  if (!(x)) {                                                            \
+#define EAST_ASSERT(x)                                                \
+  if (!(x)) {                                                         \
     ELOG_ERROR(ELOG_ROOT()) << "EAST ASSERT: " #x << "\nBacktrace:\n" \
-                            << East::BacktraceToStr(100, 2, "    ");     \
-    assert(x);                                                           \
+                            << East::BacktraceToStr(100, 2, "    ");  \
+    assert(x);                                                        \
   }
 #define EAST_ASSERT2(x, ex_info)                                     \
   if (!(x)) {                                                        \
@@ -24,4 +24,3 @@
                             << East::BacktraceToStr(100, 2, "    "); \
     assert(x);                                                       \
   }
-  
