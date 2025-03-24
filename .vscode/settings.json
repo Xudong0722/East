@@ -68,6 +68,10 @@
         "cfenv": "cpp",
         "cinttypes": "cpp",
         "valarray": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "mutex": "cpp",
+        "bitset": "cpp",
+        "condition_variable": "cpp",
+        "typeindex": "cpp"
     }
 }

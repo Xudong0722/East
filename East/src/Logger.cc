@@ -2,7 +2,7 @@
  * @Author: Xudong0722
  * @Date: 2025-03-04 23:57:19
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-04 23:58:22
+ * @Last Modified time: 2025-03-24 12:37:58
  */
 
 #include "Logger.h"
@@ -22,6 +22,7 @@ void Logger::Log(LogLevel::Level level, LogEvent::sptr event) {
   if (level < m_level)
     return;
   auto self = shared_from_this();
+  MutexType::LockGuard lock(m_mutex);
   if (!m_appenders.empty()) {
     for (auto& appender : m_appenders) {
       if (nullptr != appender) {
@@ -55,15 +56,19 @@ void Logger::fatal(LogEvent::sptr event) {
 }
 
 void Logger::addAppender(LogAppender::sptr appender) {
+  MutexType::LockGuard lock(m_mutex);
   if (nullptr == appender)
     return;
   if (nullptr == appender->getFormatter()) {
-    appender->setFormatter(m_formatter);
+    MutexType::LockGuard alock(appender->m_mutex);  //TODO
+    // appender->setFormatter(m_formatter);dead lock with if(xxx)
+    appender->m_formatter = m_formatter;
   }
   m_appenders.emplace_back(appender);
 }
 
 void Logger::delAppender(LogAppender::sptr appender) {
+  MutexType::LockGuard lock(m_mutex);
   for (auto cit = m_appenders.cbegin(); cit != m_appenders.cend(); ++cit) {
     if (*cit == appender) {
       m_appenders.erase(cit);
@@ -73,23 +78,27 @@ void Logger::delAppender(LogAppender::sptr appender) {
 }
 
 void Logger::clearAppenders() {
+  MutexType::LockGuard lock(m_mutex);
   m_appenders.clear();
 }
 
-std::shared_ptr<LogFormatter> Logger::getFormatter() const {
+std::shared_ptr<LogFormatter> Logger::getFormatter() {
+  MutexType::LockGuard lock(m_mutex);
   return m_formatter;
 }
 
 void Logger::setFormatter(std::shared_ptr<LogFormatter> formatter) {
+  MutexType::LockGuard lock(m_mutex);
   if (nullptr == formatter || formatter->hasError())
     return;
   m_formatter = formatter;
   for (auto& apd : m_appenders) {
+    MutexType::LockGuard alock(apd->m_mutex);
     if (nullptr == apd)
       continue;
     //如果appender没有formatter，再设置进去
     if (!apd->m_has_formatter)
-      apd->setFormatter(m_formatter);
+      apd->m_formatter = m_formatter;  //这并不是appender自己的，所以直接修改
   }
 }
 
@@ -102,6 +111,7 @@ void Logger::setFormatter(const std::string& pattern) {
 }
 
 std::string Logger::toYamlString() {
+  MutexType::LockGuard lock(m_mutex);
   YAML::Node node{};
 
   node["name"] = m_name;
@@ -130,6 +140,7 @@ LoggerMgr::LoggerMgr() {
 void LoggerMgr::init() {}
 
 std::string LoggerMgr::toYamlString() {
+  MutexType::LockGuard lock(m_mutex);
   YAML::Node node{};
 
   for (const auto& [_, logger] : m_loggers) {
@@ -144,6 +155,7 @@ std::string LoggerMgr::toYamlString() {
 }
 
 Logger::sptr LoggerMgr::getLogger(const std::string& name) {
+  MutexType::LockGuard lock(m_mutex);
   auto it = m_loggers.find(name);
   if (it == m_loggers.end()) {
     Logger::sptr new_logger = std::make_shared<Logger>(name);

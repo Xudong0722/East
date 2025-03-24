@@ -2,7 +2,7 @@
  * @Author: Xudong0722
  * @Date: 2025-03-04 23:38:57
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-05 23:10:03
+ * @Last Modified time: 2025-03-24 12:34:55
  */
 
 #pragma once
@@ -10,13 +10,16 @@
 #include <map>
 #include <vector>
 #include "LogEvent.h"
+#include "Mutex.h"
 #include "singleton.h"
+
 namespace East {
 class LogAppender;
 class LogFormatter;
 class Logger : public std::enable_shared_from_this<Logger> {
  public:
   using sptr = std::shared_ptr<Logger>;
+  using MutexType = Mutex;
   Logger(const std::string& name = "root");
   void Log(LogLevel::Level level, LogEvent::sptr event);
 
@@ -34,7 +37,7 @@ class Logger : public std::enable_shared_from_this<Logger> {
   void delAppender(std::shared_ptr<LogAppender> appender);
   void clearAppenders();
 
-  std::shared_ptr<LogFormatter> getFormatter() const;
+  std::shared_ptr<LogFormatter> getFormatter();
   void setFormatter(std::shared_ptr<LogFormatter> fomatter);
   void setFormatter(const std::string& pattern);
 
@@ -47,10 +50,12 @@ class Logger : public std::enable_shared_from_this<Logger> {
   std::list<std::shared_ptr<LogAppender>> m_appenders;
   std::shared_ptr<LogFormatter> m_formatter;
   Logger::sptr m_root;
+  MutexType m_mutex;
 };
 
 class LoggerMgr {
  public:
+  using MutexType = Mutex;
   LoggerMgr();
   /// @brief Get Logger by name, if logger is not exist, we will create a new logger
   /// @param name
@@ -65,6 +70,7 @@ class LoggerMgr {
  private:
   std::map<std::string, Logger::sptr> m_loggers;
   Logger::sptr m_root;
+  MutexType m_mutex;
 };
 using LogMgr = East::Singleton<LoggerMgr>;
 

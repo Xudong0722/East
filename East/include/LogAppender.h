@@ -2,13 +2,14 @@
  * @Author: Xudong0722
  * @Date: 2025-03-04 23:35:46
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-04 23:38:27
+ * @Last Modified time: 2025-03-24 12:20:07
  */
 
 #pragma once
 #include <fstream>
 #include <memory>
 #include "LogEvent.h"
+#include "Mutex.h"
 
 namespace East {
 // Log target, std or file ...
@@ -18,13 +19,14 @@ class LogAppender {
 
  public:
   using sptr = std::shared_ptr<LogAppender>;
+  using MutexType = Mutex;
   virtual ~LogAppender() {}
 
   virtual void Log(std::shared_ptr<Logger> logger, LogLevel::Level level,
                    LogEvent::sptr event) = 0;
   virtual std::string toYamlString() = 0;
   void setFormatter(std::shared_ptr<LogFormatter> formatter);
-  std::shared_ptr<LogFormatter> getFormatter() const;
+  std::shared_ptr<LogFormatter> getFormatter();
 
   void setLevel(LogLevel::Level level) { m_level = level; }
   LogLevel::Level getLevel() const { return m_level; }
@@ -33,6 +35,7 @@ class LogAppender {
   bool m_has_formatter{false};
   LogLevel::Level m_level{LogLevel::DEBUG};
   std::shared_ptr<LogFormatter> m_formatter;
+  MutexType m_mutex;
 };
 
 class StdoutLogAppender : public LogAppender {

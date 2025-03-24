@@ -23,6 +23,7 @@ std::atomic_int a_count = 0;
 East::RWLock rwlock;
 std::mutex lock;
 East::Mutex emutex;
+East::SpinLock spin_mutex;
 
 void fun1() {
   ELOG_INFO(g_logger) << "name: " << East::Thread::GetName()
@@ -40,13 +41,43 @@ void fun1() {
 }
 
 void fun2() {
-  for(;;)
-    ELOG_INFO(g_logger) << "=============================================================================================";
+  for (;;)
+    ELOG_INFO(g_logger) << "==================================================="
+                           "==========================================";
 }
 
 void fun3() {
   for (;;)
-    ELOG_INFO(g_logger) << "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    ELOG_INFO(g_logger) << "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                           "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+}
+
+void fun4() {
+  int cc{0};
+  for (int i = 0; i < 10000000; ++i) {
+    ++cc;
+  }
+  East::ScopedLock mutex(emutex);
+  count += cc;
+}
+
+void test_lock_type() {
+  auto start = std::chrono::steady_clock::now();
+  std::vector<East::Thread::sptr> threads{};
+  for (int i = 0; i < 5; ++i) {
+    East::Thread::sptr t1 =
+        std::make_shared<East::Thread>("name_" + std::to_string(i * 2), &fun4);
+    threads.emplace_back(t1);
+  }
+
+  for (auto& i : threads) {
+    i->join();
+  }
+  auto end = std::chrono::steady_clock::now();
+  std::cout
+      << "5 threads use mutex, one thread sum 100 0000 times, total time(ms): "
+      << std::chrono::duration<double, std::milli>(end - start).count()
+      << std::endl;
 }
 
 int main() {
@@ -54,7 +85,7 @@ int main() {
   YAML::Node root = YAML::LoadFile("/elvis/East/bin/conf/test_mthread_log.yml");
   East::Config::LoadFromYML(root);
   std::vector<East::Thread::sptr> threads{};
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 2; ++i) {
     East::Thread::sptr t1 =
         std::make_shared<East::Thread>("name_" + std::to_string(i * 2), &fun2);
     East::Thread::sptr t2 = std::make_shared<East::Thread>(
@@ -66,7 +97,7 @@ int main() {
   for (auto& i : threads) {
     i->join();
   }
-
+  //test_lock_type();
   ELOG_INFO(g_logger) << "Thread test end-----";
   ELOG_INFO(g_logger) << "count = " << count;
   return 0;
