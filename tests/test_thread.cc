@@ -2,16 +2,17 @@
  * @Author: Xudong0722 
  * @Date: 2025-03-21 13:43:29 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-21 18:23:50
+ * @Last Modified time: 2025-03-23 22:25:05
  */
 
 #include <unistd.h>
-#include <iostream>
-#include <string>
-#include <vector>
-#include <mutex>
 #include <atomic>
 #include <chrono>
+#include <iostream>
+#include <mutex>
+#include <string>
+#include <vector>
+#include "../East/include/Config.h"
 #include "../East/include/Elog.h"
 #include "../East/include/Thread.h"
 
@@ -38,15 +39,28 @@ void fun1() {
   }
 }
 
-void fun2() {}
+void fun2() {
+  for(;;)
+    ELOG_INFO(g_logger) << "=============================================================================================";
+}
+
+void fun3() {
+  for (;;)
+    ELOG_INFO(g_logger) << "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+}
+
 int main() {
   ELOG_INFO(g_logger) << "Thread test begin----";
-
+  YAML::Node root = YAML::LoadFile("/elvis/East/bin/conf/test_mthread_log.yml");
+  East::Config::LoadFromYML(root);
   std::vector<East::Thread::sptr> threads{};
-  for (int i = 0; i < 10; ++i) {
-    East::Thread::sptr t =
-        std::make_shared<East::Thread>("name_" + std::to_string(i), &fun1);
-    threads.emplace_back(t);
+  for (int i = 0; i < 5; ++i) {
+    East::Thread::sptr t1 =
+        std::make_shared<East::Thread>("name_" + std::to_string(i * 2), &fun2);
+    East::Thread::sptr t2 = std::make_shared<East::Thread>(
+        "name_" + std::to_string(i * 2 + 1), &fun3);
+    threads.emplace_back(t1);
+    threads.emplace_back(t2);
   }
 
   for (auto& i : threads) {
