@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-03-24 21:45:18 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-24 23:01:26
+ * @Last Modified time: 2025-03-26 00:26:58
  */
 
 #pragma once
@@ -16,7 +16,7 @@ class Fiber
  public:
   using sptr = std::shared_ptr<Fiber>;
 
-  enum State { INIT = 0, HOLD = 1, EXEC = 2, TERM = 3, READY = 4 };
+  enum State { INIT = 0, HOLD = 1, EXEC = 2, TERM = 3, READY = 4, EXCEPT = 5 };
 
  private:
   Fiber();
@@ -28,11 +28,16 @@ class Fiber
   //重置协程函数，并重置状态
   void reset(std::function<void()> cb);
   //切换到当前协程执行
-  void SwapIn();
+  void swapIn();
   //切换到后台执行
-  void SwapOut();
+  void swapOut();
+
+  State getState() const { return m_state; }
+  void setState(State state) { m_state = state; }
 
  public:
+  //设置当前协程
+  static void SetThis(Fiber*);
   //返回当前协程
   static Fiber::sptr GetThis();
   //协程切换到后台，并且设为READY状态
@@ -42,7 +47,7 @@ class Fiber
   //总协程数
   static uint64_t TotalFibers();
 
-  static MainFunc();
+  static void MainFunc();
 
  private:
   uint64_t m_id{0};         //协程id
