@@ -80,6 +80,8 @@ Fiber::~Fiber() {
       SetThis(nullptr);
     }
   }
+
+  ELOG_INFO(g_logger) << "~Fiber destroy: " << m_id;
 }
 
 //重置协程函数，并重置状态（当前状态：INIT/TERM)
