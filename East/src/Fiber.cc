@@ -57,7 +57,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size)
     EAST_ASSERT2(false, "getcontext");
   }
 
-  m_ctx.uc_link = nullptr;
+  m_ctx.uc_link = &t_master_fiber->m_ctx;  //diff
   m_ctx.uc_stack.ss_sp = m_stack;
   m_ctx.uc_stack.ss_size = m_stacksize;
 
@@ -101,7 +101,7 @@ void Fiber::reset(std::function<void()> cb) {
 }
 
 void Fiber::swapIn() {
-  EAST_ASSERT(m_state != EXEC);
+  EAST_ASSERT2(m_state != EXEC, m_state);
   SetThis(this);  //该协程切换到当前协程
   setState(EXEC);
   if (swapcontext(&t_master_fiber->m_ctx, &m_ctx)) {  //old context, new context
@@ -110,7 +110,7 @@ void Fiber::swapIn() {
 }
 
 void Fiber::swapOut() {
-  EAST_ASSERT(m_state == EXEC);
+  //EAST_ASSERT2(m_state == EXEC, m_state);
   SetThis(t_master_fiber.get());  //当前协程交还给主协程
 
   if (swapcontext(&m_ctx, &t_master_fiber->m_ctx)) {  //old context, new context
@@ -146,7 +146,7 @@ void Fiber::YieldToReady() {
 void Fiber::YieldToHold() {
   Fiber::sptr cur_fiber = GetThis();
   EAST_ASSERT(cur_fiber->getState() == EXEC);
-  //cur_fiber->setState(HOLD);
+  cur_fiber->setState(HOLD);
   cur_fiber->swapOut();
 }
 
