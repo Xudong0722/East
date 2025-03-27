@@ -42,7 +42,7 @@ Fiber::Fiber() {
   }
 
   ++s_fiber_count;
-  ELOG_INFO(g_logger) << "Main Fiber created, id: " << m_id;
+  ELOG_INFO(g_logger) << "Main Fiber created, id: " << m_id;   //main fiber id is 0
 }
 
 Fiber::Fiber(std::function<void()> cb, size_t stack_size)
@@ -63,11 +63,13 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size)
 
   makecontext(&m_ctx, &Fiber::MainFunc, 0);
 
+  setState(INIT);
   ELOG_INFO(g_logger) << "Fiber created, id: " << m_id;
 }
 
 Fiber::~Fiber() {
   --s_fiber_count;
+  bool is_master_fiber = false;
   if (m_stack) {
     EAST_ASSERT(m_state == TERM || m_state == INIT || m_state == EXCEPT);
     StackAllocator::Dealloc(m_stack, m_stacksize);
@@ -75,10 +77,17 @@ Fiber::~Fiber() {
     EAST_ASSERT(!m_cb);
     EAST_ASSERT(m_state == EXEC);
 
+    is_master_fiber = true;  //no stack means main fiber
     Fiber* cur = t_fiber;
     if (cur == this) {
       SetThis(nullptr);
     }
+  }
+
+  if (is_master_fiber) {
+    ELOG_INFO(g_logger) << "Main Fiber destroyed, id: " << m_id;
+  } else {
+    ELOG_INFO(g_logger) << "Fiber destroyed, id: " << m_id;
   }
 }
 
