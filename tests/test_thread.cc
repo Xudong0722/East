@@ -28,7 +28,7 @@ East::SpinLock spin_mutex;
 void fun1() {
   ELOG_INFO(g_logger) << "name: " << East::Thread::GetName()
                       << ", this name: " << East::Thread::GetThis()->getName()
-                      << ", id: " << East::getThreadId()
+                      << ", id: " << East::GetThreadId()
                       << ", this id: " << East::Thread::GetThis()->getId();
   for (int i = 0; i < 10000000; ++i) {
     //East::WLock wlock(rwlock);

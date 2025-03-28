@@ -18,8 +18,8 @@
   if (nullptr != logger && logger->getLevel() <= level)              \
   East::LogEventWrap(std::make_shared<East::LogEvent>(               \
                          logger, level, __FILE__, __LINE__, 0,       \
-                         static_cast<uint32_t>(East::getThreadId()), \
-                         static_cast<uint32_t>(East::getFiberId()),  \
+                         static_cast<uint32_t>(East::GetThreadId()), \
+                         static_cast<uint32_t>(East::GetFiberId()),  \
                          static_cast<uint64_t>(time(0))))            \
       .getSStream()
 
@@ -34,8 +34,8 @@
   if (nullptr != logger && logger->getLevel() <= level)              \
   East::LogEventWrap(std::make_shared<East::LogEvent>(               \
                          logger, level, __FILE__, __LINE__, 0,       \
-                         static_cast<uint32_t>(East::getThreadId()), \
-                         static_cast<uint32_t>(East::getFiberId()),  \
+                         static_cast<uint32_t>(East::GetThreadId()), \
+                         static_cast<uint32_t>(East::GetFiberId()),  \
                          static_cast<uint64_t>(time(0))))            \
       .getEvent()                                                    \
       ->format(fmt, __VA_ARGS__)

@@ -121,3 +121,34 @@ bg: 5个线程, 每个线程都对一个全局变量执行++ 1000 0000次
 
 ## 协程库
 
+### 协程
+基于ucontext_t 实现的一个协程类-Fiber
+```c++
+setcontext();  //跳转到某个协程上执行
+getcontext();  //获取当前函数上下文
+makecontext(); //将函数与某个上下文关联起来
+swapcontext(old, new); //保存当前上下文到old中，执行new上下文，最后回到old
+```
+我们定义，每个线程有一个主协程，用来调度其他协程
+
+```c++       
+          sub_fiber
+             ^
+             |
+             |
+             v
+Thread -> main_fiber  <-------->  sub_fiber
+
+```
+
+
+### 协程调度器
+
+```c++
+         1 : N       1 : M
+scheduler --> Thread  --> Fiber
+
+scheduler中含有：
+1.线程池
+2.协程调度器，将协程放在指定的线程上执行
+```
