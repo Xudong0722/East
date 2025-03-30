@@ -14,10 +14,10 @@ int main() {
   East::Fiber::GetThis();
   ELOG_INFO(g_logger) << "main begin";
   East::Fiber::sptr fiber(new East::Fiber(func));
-  fiber->swapIn();
+  fiber->call();
   ELOG_INFO(g_logger) << "main after swapIn";
-  fiber->swapIn();
+  fiber->call();
   ELOG_INFO(g_logger) << "main after end";
-  fiber->swapIn();
+  fiber->call();
   ELOG_INFO(g_logger) << "main after end2";
 }

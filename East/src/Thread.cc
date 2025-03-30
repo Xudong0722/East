@@ -37,7 +37,7 @@ void* Thread::run(void* arg) {
 
   t_cur_thread = t;
   t_cur_thread_name = t->getName();
-  t->setId(East::getThreadId());
+  t->setId(East::GetThreadId());
   pthread_setname_np(pthread_self(), t->getName().substr(0, 15).c_str());
 
   std::function<void()> cb{};

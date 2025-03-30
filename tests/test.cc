@@ -7,7 +7,7 @@ int main() {
   logger->addAppender(East::LogAppender::sptr(new East::StdoutLogAppender));
 
   auto event = std::make_shared<East::LogEvent>(
-      logger, East::LogLevel::FATAL, __FILE__, __LINE__, 0, East::getThreadId(),
+      logger, East::LogLevel::FATAL, __FILE__, __LINE__, 0, East::GetThreadId(),
       2, time(0));
   event->getSStream() << "first log! " << std::this_thread::get_id();
   logger->Log(East::LogLevel::DEBUG, event);

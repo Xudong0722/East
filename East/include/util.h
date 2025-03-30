@@ -16,9 +16,9 @@
 namespace East {
 
 // get os thread id for troubleshooting
-pid_t getThreadId();
+pid_t GetThreadId();
 
-uint32_t getFiberId();
+uint32_t GetFiberId();
 
 void Backtrace(std::vector<std::string>& call_stack, int size, int skip = 1);
 

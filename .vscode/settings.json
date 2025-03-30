@@ -72,6 +72,8 @@
         "mutex": "cpp",
         "bitset": "cpp",
         "condition_variable": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "shared_mutex": "cpp",
+        "*.inc": "cpp"
     }
 }
