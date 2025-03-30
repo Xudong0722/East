@@ -22,7 +22,8 @@ class Fiber
   Fiber();
 
  public:
-  Fiber(std::function<void()> cb, size_t stack_size = 0, bool use_caller = false);
+  Fiber(std::function<void()> cb, size_t stack_size = 0,
+        bool use_caller = false);
   ~Fiber();
 
   //重置协程函数，并重置状态

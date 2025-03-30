@@ -19,7 +19,7 @@ static Logger::sptr g_logger = ELOG_NAME("system");
 static std::atomic<uint64_t> s_fiber_id{0};
 static std::atomic<uint64_t> s_fiber_count{0};
 
-static thread_local Fiber* t_fiber{nullptr};  //当前正在执行的协程
+static thread_local Fiber* t_fiber{nullptr};              //当前正在执行的协程
 static thread_local Fiber::sptr t_master_fiber{nullptr};  //线程中的主协程
 
 static ConfigVar<uint32_t>::sptr g_fiber_stack_size = Config::Lookup<uint32_t>(
@@ -43,7 +43,8 @@ Fiber::Fiber() {
   }
 
   ++s_fiber_count;
-  ELOG_INFO(g_logger) << "Main Fiber created, id: " << m_id;   //main fiber id is 0
+  ELOG_INFO(g_logger) << "Main Fiber created, id: " << m_id
+                      << ", thread id: " << GetThreadId();  //main fiber id is 0
 }
 
 Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool use_caller)
@@ -58,19 +59,20 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool use_caller)
     EAST_ASSERT2(false, "getcontext");
   }
 
-  if(!use_caller) {
+  if (!use_caller) {
     m_ctx.uc_link = &t_master_fiber->m_ctx;  //diff
-  }else{
+  } else {
     m_ctx.uc_link = &Scheduler::GetMainFiber()->m_ctx;  //diff
   }
-  
+
   m_ctx.uc_stack.ss_sp = m_stack;
   m_ctx.uc_stack.ss_size = m_stacksize;
 
   makecontext(&m_ctx, &Fiber::MainFunc, 0);
 
   setState(INIT);
-  ELOG_INFO(g_logger) << "Fiber created, id: " << m_id;
+  ELOG_INFO(g_logger) << "Fiber created, id: " << m_id
+                      << ", thread id: " << GetThreadId();
 }
 
 Fiber::~Fiber() {
@@ -137,14 +139,14 @@ void Fiber::swapIn() {
   SetThis(this);
   EAST_ASSERT(m_state != EXEC);
   setState(EXEC);
-  if(swapcontext(&Scheduler::GetMainFiber()->m_ctx, &m_ctx)) {
+  if (swapcontext(&Scheduler::GetMainFiber()->m_ctx, &m_ctx)) {
     EAST_ASSERT2(false, "swapcontext:swap in");
   }
 }
 
 void Fiber::swapOut() {
   SetThis(Scheduler::GetMainFiber());
-  if(swapcontext(&m_ctx, &Scheduler::GetMainFiber()->m_ctx)) {
+  if (swapcontext(&m_ctx, &Scheduler::GetMainFiber()->m_ctx)) {
     EAST_ASSERT2(false, "swapcontext:swap out");
   }
 }

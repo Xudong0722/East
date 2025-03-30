@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 project(East VERSION 1.0)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function")
 
 # SET(LIB_SRC 
 #     East/src/log.cc
