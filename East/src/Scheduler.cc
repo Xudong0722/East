@@ -6,7 +6,7 @@ namespace East {
 
 static East::Logger::sptr g_logger = ELOG_NAME("system");
 
-static thread_local Scheduler* t_scheduler = nullptr;  //当前线程的调度器
+static thread_local Scheduler* t_scheduler = nullptr;    //当前线程的调度器
 static thread_local Fiber* t_scheduler_fiber = nullptr;  //当前调度器的主协程
 
 Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name) {
@@ -21,7 +21,9 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name) {
                  "Scheduler has been created");  //一个线程只能有一个调度器
     t_scheduler = this;
 
-    m_rootFiber = std::make_shared<Fiber>(std::bind(&Scheduler::run, this), 0, true);
+    m_rootFiber =
+        std::make_shared<Fiber>(std::bind(&Scheduler::run, this), 0, true);
+    t_scheduler_fiber = m_rootFiber.get();
     East::Thread::SetName(m_name);
     m_rootThreadId = East::GetThreadId();
     m_threadIds.push_back(m_rootThreadId);
