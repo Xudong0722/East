@@ -57,5 +57,8 @@ target_link_libraries(test_util "${LIBS}")
 add_executable(test_fiber tests/test_fiber.cc)
 target_link_libraries(test_fiber "${LIBS}")
 
+add_executable(test_scheduler tests/test_scheduler.cc)
+target_link_libraries(test_scheduler "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

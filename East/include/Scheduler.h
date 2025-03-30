@@ -29,14 +29,14 @@ public:
    void setThis();
    void start();
    void stop();
-   void switchTo(int thread_id = -1);  //切换到某个线程中执行
-   std::ostream& dump(std::ostream& os);
+   //void switchTo(int thread_id = -1);  //切换到某个线程中执行
+   //std::ostream& dump(std::ostream& os);
 
    template<class Task>
     void schedule(Task&& task, int thread_id = -1) {
         bool need_tickle = false;
          {
-              MutexType::Lock lock(m_mutex);
+              MutexType::LockGuard lock(m_mutex);
               need_tickle = scheduleNoLock(std::forward<Task>(task), thread_id);
          }
 
@@ -48,7 +48,7 @@ public:
     void schedule(Iterator begin, Iterator end) {
         bool need_tickle = false;
         {
-            MutexType::Lock lock(m_mutex);
+            MutexType::LockGuard lock(m_mutex);
             while(begin != end) {
                 need_tickle = scheduleNolock(&*begin, -1) || need_tickle;
                 ++ begin;
@@ -60,7 +60,7 @@ public:
     }
 private:
     template<class Task>
-    void scheduleNoLock(Task&& task, int thread_id = -1) {
+    bool scheduleNoLock(Task&& task, int thread_id = -1) {
         bool need_tickle = m_tasks.empty();
         ExecuteTask et(std::forward<Task>(task), thread_id);
         if(et.fiber || et.cb) {

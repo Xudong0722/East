@@ -22,14 +22,17 @@ class Fiber
   Fiber();
 
  public:
-  Fiber(std::function<void()> cb, size_t stack_size = 0);
+  Fiber(std::function<void()> cb, size_t stack_size = 0, bool use_caller = false);
   ~Fiber();
 
   //重置协程函数，并重置状态
   void reset(std::function<void()> cb);
   //切换到当前协程执行
-  void swapIn();
+  void call();
   //切换到后台执行
+  void back();
+
+  void swapIn();
   void swapOut();
 
   State getState() const { return m_state; }
