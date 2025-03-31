@@ -50,6 +50,8 @@ class Fiber
   static void YieldToHold();
   //总协程数
   static uint64_t TotalFibers();
+  //获取当前协程id
+  static uint64_t GetFiberId();
 
   static void MainFunc();
 

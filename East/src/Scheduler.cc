@@ -6,9 +6,11 @@ namespace East {
 
 static East::Logger::sptr g_logger = ELOG_NAME("system");
 
-static thread_local Scheduler* t_scheduler = nullptr;  //当前线程的调度器
-static thread_local Fiber* t_scheduler_fiber = nullptr;  //当前调度器的主协程
-std::atomic<int32_t> Scheduler::s_task_id{0};            //任务id
+static thread_local Scheduler* t_scheduler =
+    nullptr;  //当前线程的调度器，同一个调度器下的所有线程指向同一个调度器
+static thread_local Fiber* t_scheduler_fiber =
+    nullptr;  //当前线程的调度协程，每个协程都独有一个，包括caller线程
+std::atomic<int32_t> Scheduler::s_task_id{0};  //任务id
 
 Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
     : m_name(name) {
@@ -54,8 +56,8 @@ Fiber* Scheduler::GetMainFiber() {
   return t_scheduler_fiber;
 }
 
-void Scheduler::setThis() {
-  t_scheduler = this;
+void Scheduler::SetThis(Scheduler* p) {
+  t_scheduler = p;
 }
 
 void Scheduler::start() {
@@ -122,7 +124,7 @@ void Scheduler::stop() {
 
 void Scheduler::run() {
   ELOG_INFO(g_logger) << "run";
-  setThis();
+  SetThis(this);
 
   if (East::GetThreadId() != m_rootThreadId) {
     t_scheduler_fiber =

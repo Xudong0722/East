@@ -20,7 +20,8 @@ static std::atomic<uint64_t> s_fiber_id{0};
 static std::atomic<uint64_t> s_fiber_count{0};
 
 static thread_local Fiber* t_fiber{nullptr};  //当前正在执行的协程
-static thread_local Fiber::sptr t_master_fiber{nullptr};  //线程中的主协程
+static thread_local Fiber::sptr t_master_fiber{
+    nullptr};  //当前线程中的主协程，切换到这里面，就相当于切换到了主协程中运行
 
 static ConfigVar<uint32_t>::sptr g_fiber_stack_size = Config::Lookup<uint32_t>(
     "fiber.stack_size", 1024 * 1024, "fiber stack size");
@@ -59,7 +60,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool use_caller)
     EAST_ASSERT2(false, "getcontext");
   }
 
-  if (use_caller) {
+  if (!use_caller) {
     m_ctx.uc_link = &t_master_fiber->m_ctx;  //diff
   } else {
     m_ctx.uc_link = &Scheduler::GetMainFiber()->m_ctx;  //diff
@@ -93,9 +94,11 @@ Fiber::~Fiber() {
   }
 
   if (is_master_fiber) {
-    ELOG_INFO(g_logger) << "Main Fiber destroyed, id: " << m_id;
+    ELOG_INFO(g_logger) << "Main Fiber destroyed, id: " << m_id
+                        << ", thread id: " << GetThreadId();
   } else {
-    ELOG_INFO(g_logger) << "Fiber destroyed, id: " << m_id;
+    ELOG_INFO(g_logger) << "Fiber destroyed, id: " << m_id
+                        << ", thread id: " << GetThreadId();
   }
 }
 
@@ -185,6 +188,10 @@ void Fiber::YieldToHold() {
 
 uint64_t Fiber::TotalFibers() {
   return s_fiber_count;
+}
+
+uint64_t Fiber::GetFiberId() {
+  return nullptr == t_fiber ? 0 : t_fiber->m_id;
 }
 
 void Fiber::MainFunc() {

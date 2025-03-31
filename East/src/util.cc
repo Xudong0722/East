@@ -9,6 +9,7 @@
 #include <execinfo.h>
 #include <sstream>
 #include "Elog.h"
+#include "Fiber.h"
 
 namespace East {
 
@@ -27,7 +28,7 @@ pid_t GetThreadId() {
 }
 
 uint32_t GetFiberId() {
-  return 0u;
+  return static_cast<uint32_t>(Fiber::GetFiberId());
 }
 
 void Backtrace(std::vector<std::string>& call_stack, int size, int skip) {

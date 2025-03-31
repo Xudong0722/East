@@ -26,10 +26,10 @@ class Scheduler {
 
  public:
   //static func
-  static Scheduler* GetThis();   //获取当前线程的协程调度器
-  static Fiber* GetMainFiber();  //获取当前协程调度器的主协程
+  static Scheduler* GetThis();      //获取当前线程的协程调度器
+  static void SetThis(Scheduler*);  //设置当前线程的协程调度器
+  static Fiber* GetMainFiber();     //获取当前协程调度器的主协程
  public:
-  void setThis();
   void start();
   void stop();
   //void switchTo(int thread_id = -1);  //切换到某个线程中执行
