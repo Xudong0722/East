@@ -184,3 +184,59 @@ Flow:
 13.idle协程检测到stop将自身状态置为term，完成线程任务退出。
 
 ```
+
+#### 关于fiber的几个变量
+
+程序中有几个static thread_local的变量，我们梳理一下他们的关系：
+```cpp
+static thread_local Fiber* t_fiber;              //当前正在执行的协程
+static thread_local Fiber::sptr t_master_fiber;  //当前线程中的主协程，切换到这里面，就相当于切换到了主协程中运行
+static thread_local Fiber* t_scheduler_fiber;    //当前线程的调度协程，每个协程都独有一个，包括caller线程
+
+
+因为他们是thread_local描述的，所以每个线程中都有一个变量，其中比较好理解的是t_fiber, 它始终指向当前线程正在执行的协程，
+而其他两个先看注释，下面用实际场景来解释：
+
+1. 一个线程，不使用caller -这种情况是对应创建一个线程进行协程的调度，main函数不参与
+2. 一个线程，使用caller   -这种情况是对应只使用main函数线程进行协程调度
+
+第一种case：
+main thread start
+    |
+create scheduler
+    |
+start scheduler                        ---------->    create one thread
+    |                                                        |
+add task                                    t_scheduler_fiber = t_fiber = t_master_fiber
+    |                                                        |
+stop scheduler(wait all task done)                     swap in     ---------->   swap(t_scheduler_fiber, sub fiber)
+    |                                                                                       |
+main thread end                                    schedule over   <----------       done, swap out
+
+这种情况下， t_shceduler_fiber 没有实体，只是一个指针而已，它和t_master_fiber的含义是一样的，保存调度协程的上下文
+
+
+
+第二种case：
+这种case要复杂一些，因为caller线程参与调度会新建一个root fiber即t_scheduler_fiber
+共有三种协程： main函数线程对应的主协程， 调度协程， 任务协程
+
+main thread start
+    |
+create scheduler         --------------->  create t_fiber, and t_master_fiber = t_fiber
+    |
+start scheduler(do nothing)
+    |
+add task
+    |
+stop scheduler            --------------->    call root fiber : swap(t_master_fiber, t_scheduler_fiber)
+    |                                                          |
+wait all task done                                    find task, swap in  --------> swap(t_scheduler_fiber, sub fiber)
+    |                                                                                            |
+main thread end                                       scheduler  done      <---------     done, swap out
+                                                              |
+                                           swap(t_scheduler_fiber, t_master_fiber)
+
+
+
+```
