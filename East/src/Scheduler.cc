@@ -6,10 +6,12 @@ namespace East {
 
 static East::Logger::sptr g_logger = ELOG_NAME("system");
 
-static thread_local Scheduler* t_scheduler = nullptr;    //当前线程的调度器
+static thread_local Scheduler* t_scheduler = nullptr;  //当前线程的调度器
 static thread_local Fiber* t_scheduler_fiber = nullptr;  //当前调度器的主协程
+std::atomic<int32_t> Scheduler::s_task_id{0};            //任务id
 
-Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name) {
+Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
+    : m_name(name) {
   EAST_ASSERT2(threads > 0, "threads must be at least 1");
 
   //user_caller: 是否使用当前调用线程
@@ -23,8 +25,10 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name) {
 
     m_rootFiber =
         std::make_shared<Fiber>(std::bind(&Scheduler::run, this), 0, true);
+
     t_scheduler_fiber = m_rootFiber.get();
-    East::Thread::SetName(m_name);
+
+    East::Thread::SetName(m_name);  //why use this name?
     m_rootThreadId = East::GetThreadId();
     m_threadIds.push_back(m_rootThreadId);
   } else {
@@ -72,11 +76,12 @@ void Scheduler::start() {
 
 //停止调度器, 确保所有任务都处理完毕，同时要避免内存泄漏
 void Scheduler::stop() {
+  ELOG_INFO(g_logger) << "enter Scheduler::stop";
   m_autoStop = true;
 
   if (m_rootFiber != nullptr && m_threadCount == 0 &&
       (m_rootFiber->getState() == Fiber::TERM ||
-       m_rootFiber->getState() == Fiber::EXCEPT)) {
+       m_rootFiber->getState() == Fiber::INIT)) {
     ELOG_INFO(g_logger) << this << " stopped.";
     m_stopping = true;
 
@@ -97,8 +102,9 @@ void Scheduler::stop() {
   }
 
   if (m_rootFiber) {
-    tickle();
     if (!stopping()) {
+      ELOG_INFO(g_logger)
+          << "Scheduler not stopping, root fiber will be called before stop";
       m_rootFiber->call();
     }
   }
@@ -124,7 +130,7 @@ void Scheduler::run() {
             .get();  //如果不是scheduer的主线程，就把当前协程设置为主协程
   }
 
-  ELOG_INFO(g_logger) << "idle fiber will be created here";
+  //ELOG_INFO(g_logger) << "idle fiber will be created here";
   //创建一个idle协程，专门用于处理空闲状态
   Fiber::sptr idle_fiber =
       std::make_shared<Fiber>(std::bind(&Scheduler::idle, this));
@@ -165,22 +171,28 @@ void Scheduler::run() {
     if (tickle_me) {
       tickle();
     }
-
+    if (task.isValidTask())
+      ELOG_INFO(g_logger) << "Hanlded task in queue, id: " << task.getTaskId()
+                          << ", task type: " << task.getTaskType();
     //如果协程的状态可以执行，则执行
-    if (task.fiber != nullptr && (task.fiber->getState() != Fiber::TERM &&
-                                  task.fiber->getState() != Fiber::EXCEPT)) {
+    if (task.getTaskType() == ExecuteTask::FIBER &&
+        (task.fiber->getState() != Fiber::TERM &&
+         task.fiber->getState() != Fiber::EXCEPT)) {
       task.fiber->swapIn();
       --m_activeThreadCount;
 
-      //执行完之后如果协程还是ready状态，就放回到任务队列中
-      if (task.fiber->getState() == Fiber::READY) {
+      if (task.fiber->getState() ==
+          Fiber::READY) {  //执行完之后如果协程还是ready状态，就放回到任务队列中
+        ELOG_INFO(g_logger) << "After swapIn, task fiber is on ready state, "
+                               "put back to queue. Task id: "
+                            << task.getTaskId();
         schedule(task.fiber);
       } else if (task.fiber->getState() != Fiber::TERM &&
                  task.fiber->getState() != Fiber::EXCEPT) {
         task.fiber->setState(Fiber::HOLD);
       }
       task.reset();
-    } else if (task.cb != nullptr) {
+    } else if (task.getTaskType() == ExecuteTask::FUNCTION) {
       if (cb_fiber != nullptr) {
         cb_fiber->reset(task.cb);
       } else {

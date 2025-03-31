@@ -152,3 +152,33 @@ scheduler中含有：
 1.线程池
 2.协程调度器，将协程放在指定的线程上执行
 ```
+```c++
+调度器的逻辑有些复杂，用一个简单的case来模拟上流程：
+业务方代码：
+void test_fiber() {
+  ELOG_INFO(g_logger) << "test fiber";
+}
+
+int main() {
+  East::Scheduler scheduler(2, true, "test_scheduler");
+  scheduler.start();
+  scheduler.schedule(&test_fiber);
+  scheduler.stop();
+  return 0;
+}
+
+Flow:
+0.-------业务方构造scheduler
+1.首先创建一个调度器，第二个参数use_caller为true，所以只会再创建一个线程。
+2.在该线程创建一个主协程 main fiber
+3.将this设置为当前线程的调度器
+4.在该调度器中创建一个调度协程 root fiber， 运行函数绑定为Scheduler::run
+5.将root fiber设置为当前调度器的主协程
+6.将当前线程id放到scheduler的线程id数组里
+7.-------业务方调用start
+8.根据线程数量创建线程，运行函数绑定为Scheduler::run
+9.-------业务方调用schedule, 添加任务
+10.Scheduler通过线程安全的方法（互斥量）将任务添加到任务队列中
+11.因为
+
+```

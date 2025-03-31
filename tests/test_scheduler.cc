@@ -9,7 +9,7 @@ void test_fiber() {
 
 int main() {
   ELOG_INFO(g_logger) << "main start";
-  East::Scheduler scheduler(2, true, "test_scheduler");
+  East::Scheduler scheduler(1, true, "test_scheduler");
   scheduler.start();
   scheduler.schedule(&test_fiber);
   scheduler.stop();

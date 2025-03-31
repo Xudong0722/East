@@ -5,7 +5,9 @@
 #include <list>
 #include <memory>
 #include <string>
+#include <typeinfo>
 #include <vector>
+#include "Elog.h"  //debug
 #include "Fiber.h"
 #include "Thread.h"
 
@@ -67,6 +69,9 @@ class Scheduler {
     ExecuteTask et(std::forward<Task>(task), thread_id);
     if (et.fiber || et.cb) {
       m_tasks.emplace_back(std::move(et));
+      ELOG_DEBUG(ELOG_NAME("system"))
+          << "Add new task, type: " << typeid(decltype(task)).name()
+          << ", task id: " << et.getTaskId();
     }
     return need_tickle;
   }
@@ -78,28 +83,57 @@ class Scheduler {
   virtual bool stopping();
 
  private:
+  static std::atomic<int32_t> s_task_id;
   //Task: Fiber or function<void()>
   struct ExecuteTask {
     Fiber::sptr fiber;
     std::function<void()> cb;
 
     int thread_id;  //在某个线程中执行
+    int task_id;    //用于调试
 
-    ExecuteTask(Fiber::sptr f, int id) : fiber(f), thread_id(id) {}
-    ExecuteTask(std::function<void()> f, int id) : cb(f), thread_id(id) {}
+    ExecuteTask(Fiber::sptr f, int id)
+        : fiber(f), thread_id(id), task_id(++s_task_id) {}
+    ExecuteTask(std::function<void()> f, int id)
+        : cb(f), thread_id(id), task_id(++s_task_id) {}
     ExecuteTask(Fiber::sptr* f, int id)
-        : thread_id(id) {  //外部直接交出所有权，转移到ExecuteTask中
+        : thread_id(id),
+          task_id(++s_task_id) {  //外部直接交出所有权，转移到ExecuteTask中
       fiber.swap(*f);
     }
-    ExecuteTask(std::function<void()>* f, int id) : thread_id(id) {
+    ExecuteTask(std::function<void()>* f, int id)
+        : thread_id(id), task_id(++s_task_id) {
       cb.swap(*f);
     }
-    ExecuteTask() : thread_id(-1) {}
+    ExecuteTask() : thread_id(-1), task_id(++s_task_id) {}
+
+    int getTaskId() const { return task_id; }
 
     void reset() {
       fiber = nullptr;
       cb = nullptr;
       thread_id = -1;
+    }
+
+    enum TaskType {
+      NONE = -1,
+      FIBER = 0,
+      FUNCTION = 1,
+    };
+
+    TaskType getTaskType() const {
+      if (nullptr != fiber) {
+        return FIBER;
+      } else if (nullptr != cb) {
+        return FUNCTION;
+      }
+      return NONE;
+    }
+
+    bool isValidTask() const {
+      if (getTaskType() == NONE)
+        return false;
+      return true;
     }
   };
 

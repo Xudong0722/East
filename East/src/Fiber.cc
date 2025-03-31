@@ -19,7 +19,7 @@ static Logger::sptr g_logger = ELOG_NAME("system");
 static std::atomic<uint64_t> s_fiber_id{0};
 static std::atomic<uint64_t> s_fiber_count{0};
 
-static thread_local Fiber* t_fiber{nullptr};              //当前正在执行的协程
+static thread_local Fiber* t_fiber{nullptr};  //当前正在执行的协程
 static thread_local Fiber::sptr t_master_fiber{nullptr};  //线程中的主协程
 
 static ConfigVar<uint32_t>::sptr g_fiber_stack_size = Config::Lookup<uint32_t>(
@@ -59,7 +59,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool use_caller)
     EAST_ASSERT2(false, "getcontext");
   }
 
-  if (!use_caller) {
+  if (use_caller) {
     m_ctx.uc_link = &t_master_fiber->m_ctx;  //diff
   } else {
     m_ctx.uc_link = &Scheduler::GetMainFiber()->m_ctx;  //diff
