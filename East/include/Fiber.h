@@ -22,19 +22,23 @@ class Fiber
   Fiber();
 
  public:
+  /// @brief Create a fiber with a function
+  /// @param cb
+  /// @param stack_size, if 0, use default stack size
+  /// @param run_in_scheduler, please set false if you are not in scheduler
   Fiber(std::function<void()> cb, size_t stack_size = 0,
-        bool use_caller = false);
+        bool run_in_scheduler = true);
   ~Fiber();
 
   //重置协程函数，并重置状态
   void reset(std::function<void()> cb);
   //切换到当前协程执行
-  void call();
+  void resume();
   //切换到后台执行
-  void back();
+  void yield();
 
-  void swapIn();
-  void swapOut();
+  //   void swapIn();
+  //   void swapOut();
 
   State getState() const { return m_state; }
   void setState(State state) { m_state = state; }
@@ -62,6 +66,7 @@ class Fiber
   ucontext_t m_ctx;
   void* m_stack{nullptr};
   std::function<void()> m_cb;
+  bool m_run_in_scheduler{false};
 };
 
 }  // namespace East

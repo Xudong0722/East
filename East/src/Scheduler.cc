@@ -26,7 +26,7 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
     t_scheduler = this;
 
     m_rootFiber =
-        std::make_shared<Fiber>(std::bind(&Scheduler::run, this), 0, true);
+        std::make_shared<Fiber>(std::bind(&Scheduler::run, this), 0, false);
 
     t_scheduler_fiber = m_rootFiber.get();
 
@@ -107,7 +107,7 @@ void Scheduler::stop() {
     if (!stopping()) {
       ELOG_INFO(g_logger)
           << "Scheduler not stopping, root fiber will be called before stop";
-      m_rootFiber->call();
+      m_rootFiber->resume();
     }
   }
 
@@ -180,12 +180,12 @@ void Scheduler::run() {
     if (task.getTaskType() == ExecuteTask::FIBER &&
         (task.fiber->getState() != Fiber::TERM &&
          task.fiber->getState() != Fiber::EXCEPT)) {
-      task.fiber->swapIn();
+      task.fiber->resume();
       --m_activeThreadCount;
 
       if (task.fiber->getState() ==
           Fiber::READY) {  //执行完之后如果协程还是ready状态，就放回到任务队列中
-        ELOG_INFO(g_logger) << "After swapIn, task fiber is on ready state, "
+        ELOG_INFO(g_logger) << "After resume, task fiber is on ready state, "
                                "put back to queue. Task id: "
                             << task.getTaskId();
         schedule(task.fiber);
@@ -201,7 +201,7 @@ void Scheduler::run() {
         cb_fiber = std::make_shared<Fiber>(task.cb);
       }
       task.reset();
-      cb_fiber->swapIn();
+      cb_fiber->resume();
       --m_activeThreadCount;
       if (cb_fiber->getState() == Fiber::READY) {
         schedule(cb_fiber);
@@ -225,7 +225,7 @@ void Scheduler::run() {
       }
 
       ++m_idleThreadCount;
-      idle_fiber->swapIn();
+      idle_fiber->resume();
       --m_idleThreadCount;
       if (idle_fiber->getState() != Fiber::TERM &&
           idle_fiber->getState() != Fiber::EXCEPT) {

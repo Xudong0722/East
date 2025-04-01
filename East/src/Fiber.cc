@@ -48,8 +48,8 @@ Fiber::Fiber() {
                       << ", thread id: " << GetThreadId();  //main fiber id is 0
 }
 
-Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool use_caller)
-    : m_id(++s_fiber_id), m_cb(cb) {
+Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool run_in_scheduler)
+    : m_id(++s_fiber_id), m_cb(cb), m_run_in_scheduler(run_in_scheduler) {
 
   ++s_fiber_count;
   m_stacksize = stack_size != 0 ? stack_size : g_fiber_stack_size->getValue();
@@ -60,12 +60,13 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool use_caller)
     EAST_ASSERT2(false, "getcontext");
   }
 
-  if (!use_caller) {
-    m_ctx.uc_link = &t_master_fiber->m_ctx;  //diff
-  } else {
-    m_ctx.uc_link = &Scheduler::GetMainFiber()->m_ctx;  //diff
-  }
+  // if (!use_caller) {
+  //   m_ctx.uc_link = &t_master_fiber->m_ctx;  //diff
+  // } else {
+  //   m_ctx.uc_link = &Scheduler::GetMainFiber()->m_ctx;  //diff
+  // }
 
+  m_ctx.uc_link = nullptr;
   m_ctx.uc_stack.ss_sp = m_stack;
   m_ctx.uc_stack.ss_size = m_stacksize;
 
@@ -73,14 +74,16 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool use_caller)
 
   setState(INIT);
   ELOG_INFO(g_logger) << "Fiber created, id: " << m_id
-                      << ", thread id: " << GetThreadId();
+                      << ", thread id: " << GetThreadId()
+                      << ", run in scheduler: " << m_run_in_scheduler;
 }
 
 Fiber::~Fiber() {
   --s_fiber_count;
   bool is_master_fiber = false;
   if (m_stack) {
-    EAST_ASSERT(m_state == TERM || m_state == INIT || m_state == EXCEPT);
+    EAST_ASSERT2(m_state == TERM || m_state == INIT || m_state == EXCEPT,
+                 m_state);
     StackAllocator::Dealloc(m_stack, m_stacksize);
   } else {
     EAST_ASSERT(!m_cb);
@@ -120,39 +123,67 @@ void Fiber::reset(std::function<void()> cb) {
   setState(INIT);
 }
 
-void Fiber::call() {
+void Fiber::resume() {
   EAST_ASSERT2(m_state != EXEC, m_state);
   SetThis(this);  //该协程切换到当前协程
   setState(EXEC);
-  if (swapcontext(&t_master_fiber->m_ctx, &m_ctx)) {  //old context, new context
-    EAST_ASSERT2(false, "swapcontext:swap in");
+
+  if (!m_run_in_scheduler) {
+    if (swapcontext(&t_master_fiber->m_ctx,
+                    &m_ctx)) {  //old context, new context
+      EAST_ASSERT2(false, "swapcontext: master fiber to cur fiber failed.");
+    }
+  } else {
+    if (swapcontext(&Scheduler::GetMainFiber()->m_ctx,
+                    &m_ctx)) {  //old context, new context
+      EAST_ASSERT2(false, "swapcontext: scheduler fiber to cur fiber failed.");
+    }
   }
+  // ELOG_DEBUG(g_logger) << "Fiber resumed, id: " << m_id
+  //             << ", thread id: " << GetThreadId() << ", state: " << m_state << ", m_run_in_caller: " << m_run_in_scheduler
+  //             << ", master fiber addr: " << t_master_fiber.get() << ", cur fiber addr: " << this
+  //             << ", scheduler fiber: " << Scheduler::GetMainFiber();
 }
 
-void Fiber::back() {
+void Fiber::yield() {
   //EAST_ASSERT2(m_state == EXEC, m_state);
-  SetThis(t_master_fiber.get());  //当前协程交还给主协程
+  if (m_run_in_scheduler)
+    SetThis(Scheduler::GetMainFiber());
+  else
+    SetThis(t_master_fiber.get());  //当前协程交还给主协程
+  if (getState() != TERM) {
+    setState(READY);
+  }
 
-  if (swapcontext(&m_ctx, &t_master_fiber->m_ctx)) {  //old context, new context
-    EAST_ASSERT2(false, "swapcontext:swap out");
+  if (!m_run_in_scheduler) {
+    if (swapcontext(&m_ctx,
+                    &t_master_fiber->m_ctx)) {  //old context, new context
+      EAST_ASSERT2(false, "swapcontext: cur fiber to master fiber failed.");
+    }
+  } else {
+    if (swapcontext(
+            &m_ctx,
+            &Scheduler::GetMainFiber()->m_ctx)) {  //old context, new context
+      EAST_ASSERT2(false, "swapcontext: cur fiber to scheduler fiber failed.");
+    }
   }
 }
 
-void Fiber::swapIn() {
-  SetThis(this);
-  EAST_ASSERT(m_state != EXEC);
-  setState(EXEC);
-  if (swapcontext(&Scheduler::GetMainFiber()->m_ctx, &m_ctx)) {
-    EAST_ASSERT2(false, "swapcontext:swap in");
-  }
-}
+// void Fiber::swapIn() {
+//   SetThis(this);
+//   EAST_ASSERT(m_state != EXEC);
+//   setState(EXEC);
+//   if (swapcontext(&Scheduler::GetMainFiber()->m_ctx, &m_ctx)) {
+//     EAST_ASSERT2(false, "swapcontext:swap in");
+//   }
+// }
 
-void Fiber::swapOut() {
-  SetThis(Scheduler::GetMainFiber());
-  if (swapcontext(&m_ctx, &Scheduler::GetMainFiber()->m_ctx)) {
-    EAST_ASSERT2(false, "swapcontext:swap out");
-  }
-}
+// void Fiber::swapOut() {
+//   SetThis(Scheduler::GetMainFiber());
+//   if (swapcontext(&m_ctx, &Scheduler::GetMainFiber()->m_ctx)) {
+//     EAST_ASSERT2(false, "swapcontext:swap out");
+//   }
+// }
 
 void Fiber::SetThis(Fiber* p) {
   t_fiber = p;
@@ -175,7 +206,7 @@ void Fiber::YieldToReady() {
   Fiber::sptr cur_fiber = GetThis();
   EAST_ASSERT(cur_fiber->getState() == EXEC);  //期望当前协程是正在执行的状态
   cur_fiber->setState(READY);
-  cur_fiber->back();  //将当前协程切换出去
+  cur_fiber->yield();  //将当前协程切换出去
 }
 
 //将当前协程切换到后台，并且设置为Hold状态
@@ -183,7 +214,7 @@ void Fiber::YieldToHold() {
   Fiber::sptr cur_fiber = GetThis();
   EAST_ASSERT(cur_fiber->getState() == EXEC);
   cur_fiber->setState(HOLD);
-  cur_fiber->back();
+  cur_fiber->yield();
 }
 
 uint64_t Fiber::TotalFibers() {
@@ -208,6 +239,10 @@ void Fiber::MainFunc() {
     cur_fiber->setState(EXCEPT);
     ELOG_ERROR(g_logger) << "Fiber Except: ";
   }
+
+  auto raw_ptr = cur_fiber.get();
+  cur_fiber.reset();  //ref count minus one
+  raw_ptr->yield();
 }
 
 };  // namespace East

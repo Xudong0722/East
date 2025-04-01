@@ -19,7 +19,7 @@ class simpleScheduler {
     while (it != m_fibers.end()) {
       task = *it;
       it = m_fibers.erase(it);
-      task->call();
+      task->resume();
     }
   }
 
@@ -28,12 +28,13 @@ class simpleScheduler {
 };
 
 void hello_world(int i) {
-  std::cout << "hello world " << i << std::endl;
+  // std::cout << "hello world " << i << std::endl;
+  ELOG_INFO(g_logger) << "hello world: " << i;
 }
 
 void test_scheduler() {
   ELOG_INFO(g_logger) << "test scheduler start";
-  East::Scheduler scheduler(3, true, "test_scheduler");
+  East::Scheduler scheduler(1, true, "test_scheduler");
   scheduler.start();
   scheduler.schedule(&test_fiber);
   scheduler.stop();
@@ -45,7 +46,7 @@ void test_simple_scheduler() {
   simpleScheduler ss{};
   for (int i = 0; i < 10; ++i) {
     East::Fiber::sptr fiber =
-        std::make_shared<East::Fiber>(std::bind(hello_world, i));
+        std::make_shared<East::Fiber>(std::bind(hello_world, i), 0, false);
     ss.push_back(fiber);
   }
   ss.run();
