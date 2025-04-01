@@ -1,3 +1,9 @@
+/*
+ * @Author: Xudong0722 
+ * @Date: 2025-04-01 22:53:37 
+ * @Last Modified by:   Xudong0722 
+ * @Last Modified time: 2025-04-01 22:53:37 
+ */
 
 #pragma once
 
@@ -71,7 +77,8 @@ class Scheduler {
       m_tasks.emplace_back(std::move(et));
       ELOG_DEBUG(ELOG_NAME("system"))
           << "Add new task, type: " << typeid(decltype(task)).name()
-          << ", task id: " << et.getTaskId();
+          << ", task id: " << et.getTaskId()
+          << ", thread id: " << thread_id;
     }
     return need_tickle;
   }

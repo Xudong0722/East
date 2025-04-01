@@ -1,3 +1,9 @@
+/*
+ * @Author: Xudong0722 
+ * @Date: 2025-04-01 22:53:33 
+ * @Last Modified by:   Xudong0722 
+ * @Last Modified time: 2025-04-01 22:53:33 
+ */
 #include "Scheduler.h"
 #include "Elog.h"
 #include "Macro.h"
@@ -107,7 +113,7 @@ void Scheduler::stop() {
     if (!stopping()) {
       ELOG_INFO(g_logger)
           << "Scheduler not stopping, root fiber will be called before stop";
-      m_rootFiber->resume();
+      m_rootFiber->resume();    //确保调度器stop之前会执行一次run方法，如果放在start里面的话，如果没有任务就空跑一次fiber了
     }
   }
 
