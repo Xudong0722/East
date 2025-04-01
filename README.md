@@ -237,6 +237,48 @@ main thread end                                       scheduler  done      <----
                                                               |
                                            swap(t_scheduler_fiber, t_master_fiber)
 
+```
+综上，如果在scheduler里的fiber要执行，会和调度协程交换执行权，在调度协程完成所有的调度后，和master 协程交换回到主协程的执行。如果没有调度器，那只会涉及任务协程和master协程之间的切换，这种情况比较简单。我们将代码优化一下，在Fiber中增加一个m_run_in_scheduler的bool成员，如果是在调度器中运行的协程，应该与调度协程交换，否则直接与主协程交换。
+```cpp
+void Fiber::resume() {
+  EAST_ASSERT2(m_state != EXEC, m_state);
+  SetThis(this);  
+  setState(EXEC);
 
+  if (!m_run_in_scheduler) {
+    if (swapcontext(&t_master_fiber->m_ctx,
+                    &m_ctx)) {  
+      EAST_ASSERT2(false, "swapcontext: master fiber to cur fiber failed.");
+    }
+  } else {
+    if (swapcontext(&Scheduler::GetMainFiber()->m_ctx,
+                    &m_ctx)) {  
+      EAST_ASSERT2(false, "swapcontext: scheduler fiber to cur fiber failed.");
+    }
+  }
+}
 
+void Fiber::yield() {
+  //EAST_ASSERT2(m_state == EXEC, m_state);
+  if (m_run_in_scheduler)
+    SetThis(Scheduler::GetMainFiber());
+  else
+    SetThis(t_master_fiber.get());  //当前协程交还给主协程
+  if (getState() != TERM) {
+    setState(READY);
+  }
+
+  if (!m_run_in_scheduler) {
+    if (swapcontext(&m_ctx,
+                    &t_master_fiber->m_ctx)) {  
+      EAST_ASSERT2(false, "swapcontext: cur fiber to master fiber failed.");
+    }
+  } else {
+    if (swapcontext(
+            &m_ctx,
+            &Scheduler::GetMainFiber()->m_ctx)) { 
+      EAST_ASSERT2(false, "swapcontext: cur fiber to scheduler fiber failed.");
+    }
+  }
+}
 ```
