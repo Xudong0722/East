@@ -289,4 +289,32 @@ epoll的两种模式：
 LT模式：水平触发，内核检测到fd就绪后，若没有处理过，每一次epoll_wait都会返回该事件直到该事件被处理。兼容阻塞和非阻塞IO。
 ET模式：边缘触发，内核仅在fd变化时通知一次，之后没有变化的话不再通知。要求使用非阻塞IO。
 我们这里使用ET模式，更高效。
+注意ET模式下， socket要使用非阻塞模式， 不然可能会阻塞当前线程。
+
+epoll的核心函数：
+```cpp
+epoll_create1, 创建一个根fd-epfd，其他fd围绕这个fd进行管理
+
+epoll_ctl, 修改epfd下某一个fd的相关属性， 例如要监听的事件类型
+
+epoll_wait, 等待epfd上的fd有没有io事件发生，可以设置超时时间，0表示立即返回
+```
+
+IOManager类
+它继承自Scheduler，用来管理IO事件。
+```cpp
+针对IO事件，目前支持四个操作：
+int addEvent(int fd, Event event,std::function<void()> cb = nullptr);   对fd添加关心的事件
+bool removeEvent(int fd, Event event);              删除fd中的某个事件
+bool cancelEvent(int fd, Event event);             取消fd中的某个事件并触发回调
+bool cancelAll(int fd);                         取消某个fd所有的事件并触发
+```
+
+核心函数idle：
+```cpp
+在空闲时，他会不停调用epoll_wait来检查有没有IO事件通知，注意这里有两种情况：
+1.有新的调度任务，例如其他线程的tickle，当前协程会让出执行权
+2.有我们关心的IO事件触发，当前协程也会让出执行权去执行对应的回调函数
+```
+
 
