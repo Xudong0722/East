@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-02 17:38:22 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-02 22:27:57
+ * @Last Modified time: 2025-04-02 23:54:16
  */
 
 #include <arpa/inet.h>
@@ -46,7 +46,7 @@ void test_fiber() {
 }
 
 void test_iomgr() {
-  East::IOManager io_mgr;
+  East::IOManager io_mgr(2, true, "test_iomgr");
   io_mgr.schedule(&test_fiber);
 }
 
