@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-01 22:55:58 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-02 17:34:36
+ * @Last Modified time: 2025-04-02 22:27:50
  */
 
 #include "IOManager.h"
@@ -56,6 +56,7 @@ IOManager::IOManager(size_t threads, bool use_caller, const std::string& name)
   EAST_ASSERT2(m_epfd != -1, "invalid epoll fd.");
 
   int res = pipe(m_tickleFds);
+  //ELOG_DEBUG(g_logger) << __FUNCTION__ << ", tickle fd: " << m_tickleFds[0] << ", " << m_tickleFds[1];
   EAST_ASSERT2(res == 0, "pipe failed.");
 
   epoll_event ep_event{};
@@ -85,19 +86,19 @@ IOManager::~IOManager() {
   }
 }
 
-int IOManager::addEvent(int fd, Event event,
-                        std::function<void()> cb) {
+int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
   FdContext* fd_ctx{nullptr};
   RWMutexType::RLockGuard lock(m_mutex);
   if ((int)m_fdContexts.size() > fd) {
     fd_ctx = m_fdContexts[fd];
     lock.unlock();
   } else {
+    lock.unlock();
     RWMutexType::WLockGuard lock1(m_mutex);
     contextResize(fd * 1.5);
     fd_ctx = m_fdContexts[fd];
   }
-
+  //ELOG_INFO(g_logger) << "epfd: " << m_epfd << ", fd: " << fd <<", event: " << event <<", fd event: " << fd_ctx->events;
   FdContext::MutextType::LockGuard lock2(fd_ctx->mutex);
   if (fd_ctx->events & event) {  //如果该fd已经添加过此类型时间的话
     ELOG_ERROR(g_logger) << "Assert- addEvent, fd: " << fd
@@ -107,6 +108,7 @@ int IOManager::addEvent(int fd, Event event,
   }
 
   epoll_event ep_event{};
+  memset(&ep_event, 0, sizeof(ep_event));
   ep_event.events = EPOLLET | fd_ctx->events | event;
   ep_event.data.ptr = fd_ctx;
 
@@ -133,6 +135,7 @@ int IOManager::addEvent(int fd, Event event,
   } else {
     event_ctx.fiber = Fiber::GetThis();  //TODO
   }
+  //ELOG_INFO(g_logger) << __FUNCTION__ << "epfd: " << m_epfd << ", fd: " << fd <<", event: " << event <<", fd event: " << fd_ctx->events;
   return 0;
 }
 
@@ -154,6 +157,7 @@ bool IOManager::removeEvent(int fd, Event event) {
   }
 
   epoll_event ep_event{};
+  memset(&ep_event, 0, sizeof(ep_event));
   ep_event.events = EPOLLET | (fd_ctx->events & (~event));
   ep_event.data.ptr = fd_ctx;
 
@@ -185,7 +189,7 @@ bool IOManager::cancelEvent(int fd, Event event) {
     RWMutexType::RLockGuard lock(m_mutex);
     fd_ctx = m_fdContexts[fd];
   }
-
+  //ELOG_INFO(g_logger) << "epfd: " << m_epfd << ", fd: " << fd <<", event: " << event <<", fd event: " << fd_ctx->events;
   FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
   if ((fd_ctx->events & event) == 0) {
     ELOG_INFO(g_logger) << "This fd " << fd << " doesn't have this event "
@@ -194,6 +198,7 @@ bool IOManager::cancelEvent(int fd, Event event) {
   }
 
   epoll_event ep_event{};
+  memset(&ep_event, 0, sizeof(ep_event));
   ep_event.events = EPOLLET | (fd_ctx->events & (~event));
   ep_event.data.ptr = fd_ctx;
 
@@ -212,6 +217,8 @@ bool IOManager::cancelEvent(int fd, Event event) {
 
   fd_ctx->triggerEvent(event);
   --m_pendingEventCount;
+
+  //ELOG_DEBUG(g_logger) << __FUNCTION__ << ", epoll ctl res: " << res;
   return true;
 }
 
@@ -232,6 +239,7 @@ bool IOManager::cancelAll(int fd) {
   }
 
   epoll_event ep_event{};
+  memset(&ep_event, 0, sizeof(ep_event));
   ep_event.events = 0;
   ep_event.data.ptr = fd_ctx;
 
@@ -303,7 +311,7 @@ void IOManager::idle() {
         break;
       }
     } while (true);
-
+    //ELOG_DEBUG(g_logger) << "idle: epoll wait, res: " << res;
     for (int i = 0; i < res; ++i) {
       epoll_event& event = ep_events[i];
       if (event.data.fd == m_tickleFds[0]) {
@@ -326,12 +334,15 @@ void IOManager::idle() {
         real_events |= WRITE;
       }
 
-      int left_events = event.events & (~fd_ctx->events);
+      int left_events = (~real_events) & fd_ctx->events;  //这次没有触发的事件之后继续触发
       int op = left_events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
-      epoll_event ep_event{};
-      ep_event.events = left_events;
-      ep_event.data.ptr = fd_ctx;
-      int res2 = epoll_ctl(m_epfd, op, fd_ctx->fd, &ep_event);
+      event.events = left_events;
+    //   ELOG_DEBUG(g_logger) << __FUNCTION__ << ", fd: " << event.data.fd 
+    //     << ", fd ctx's fd: " << fd_ctx->fd
+    //     << ", fd ctx's events: " << fd_ctx->events
+    //     << ", event: " << event.events
+    //     << ", left_events: " << left_events << ", op: " << op;
+      int res2 = epoll_ctl(m_epfd, op, fd_ctx->fd, &event);
       if (res2 != 0) {
         ELOG_ERROR(g_logger)
             << "epoll_ctl failed, ep fd: " << m_epfd << ", op: " << op
@@ -342,18 +353,17 @@ void IOManager::idle() {
 
       if (real_events & READ) {
         fd_ctx->triggerEvent(READ);
-        ++m_pendingEventCount;
+        --m_pendingEventCount;
       }
       if (real_events & WRITE) {
         fd_ctx->triggerEvent(WRITE);
-        ++m_activeThreadCount;
+        --m_pendingEventCount;
       }
-
-      auto cur_fiber = Fiber::GetThis();
-      auto raw_ptr = cur_fiber.get();
-      cur_fiber.reset();
-      raw_ptr->yield();
     }
+    auto cur_fiber = Fiber::GetThis();
+    auto raw_ptr = cur_fiber.get();
+    cur_fiber.reset();
+    raw_ptr->yield();
   }
 }
 

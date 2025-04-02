@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 project(East VERSION 1.0)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function -fsanitize=address")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function")
 
 # SET(LIB_SRC 
 #     East/src/log.cc
@@ -59,6 +59,9 @@ target_link_libraries(test_fiber "${LIBS}")
 
 add_executable(test_scheduler tests/test_scheduler.cc)
 target_link_libraries(test_scheduler "${LIBS}")
+
+add_executable(test_iomanager tests/test_iomanager.cc)
+target_link_libraries(test_iomanager "${LIBS}")
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
