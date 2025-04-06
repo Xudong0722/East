@@ -2,14 +2,16 @@
  * @Author: Xudong0722
  * @Date: 2025-03-03 14:42:56
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-24 21:09:09
+ * @Last Modified time: 2025-04-06 16:38:35
  */
 
-#include "util.h"
 #include <execinfo.h>
+#include <sys/time.h>
 #include <sstream>
+
 #include "Elog.h"
 #include "Fiber.h"
+#include "util.h"
 
 namespace East {
 
@@ -63,4 +65,17 @@ std::string BacktraceToStr(int size, int skip, const std::string& prefix) {
   return ss.str();
 }
 
+//get current time(ms),
+uint64_t GetCurrentTimeInMs() {
+  timespec ts{};
+  ::clock_gettime(CLOCK_REALTIME, &ts);
+  return static_cast<uint64_t>(ts.tv_sec) * 1000 + ts.tv_nsec / 1000000;
+}
+
+//get current time(us)
+uint64_t GetCurrentTimeInUs() {
+  timespec ts{};
+  ::clock_gettime(CLOCK_REALTIME, &ts);
+  return static_cast<uint64_t>(ts.tv_sec) * 1000000 | ts.tv_nsec / 1000;
+}
 }  // namespace East

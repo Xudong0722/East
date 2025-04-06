@@ -2,7 +2,7 @@
  * @Author: Xudong0722
  * @Date: 2025-03-03 14:42:59
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-03-24 19:28:09
+ * @Last Modified time: 2025-04-06 11:01:22
  */
 
 #pragma once
@@ -25,4 +25,9 @@ void Backtrace(std::vector<std::string>& call_stack, int size, int skip = 1);
 std::string BacktraceToStr(int size, int skip = 2,
                            const std::string& prefix = "");
 
+//get current time(ms)
+uint64_t GetCurrentTimeInMs();
+
+//get current time(us)
+uint64_t GetCurrentTimeInUs();
 }  // namespace East

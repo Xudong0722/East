@@ -6,11 +6,11 @@
  */
 
 #include <arpa/inet.h>
-#include <sys/socket.h>
-#include <string.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include "../East/include/Elog.h"
 #include "../East/include/IOManager.h"
 
@@ -29,19 +29,19 @@ void test_fiber() {
   sockad.sin_family = AF_INET;
   sockad.sin_port = htons(80);
   ELOG_INFO(g_logger) << "sock fd: " << sock;
-  if(!connect(sock, (sockaddr*)&sockad, sizeof(sockad))){
-    
-  }else if(errno == EINPROGRESS) {
+  if (!connect(sock, (sockaddr*)&sockad, sizeof(sockad))) {
+
+  } else if (errno == EINPROGRESS) {
     East::IOManager::GetThis()->addEvent(sock, East::IOManager::READ, []() {
-        ELOG_INFO(g_logger) << "read callback";
-      });
+      ELOG_INFO(g_logger) << "read callback";
+    });
 
     East::IOManager::GetThis()->addEvent(sock, East::IOManager::WRITE, []() {
-        ELOG_INFO(g_logger) << "write callback";
-        East::IOManager::GetThis()->cancelEvent(sock, East::IOManager::READ);
-        close(sock);
-        //shutdown(sock, SHUT_WR);
-      });
+      ELOG_INFO(g_logger) << "write callback";
+      East::IOManager::GetThis()->cancelEvent(sock, East::IOManager::READ);
+      close(sock);
+      //shutdown(sock, SHUT_WR);
+    });
   }
 }
 

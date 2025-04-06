@@ -334,14 +334,15 @@ void IOManager::idle() {
         real_events |= WRITE;
       }
 
-      int left_events = (~real_events) & fd_ctx->events;  //这次没有触发的事件之后继续触发
+      int left_events =
+          (~real_events) & fd_ctx->events;  //这次没有触发的事件之后继续触发
       int op = left_events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
       event.events = left_events;
-    //   ELOG_DEBUG(g_logger) << __FUNCTION__ << ", fd: " << event.data.fd 
-    //     << ", fd ctx's fd: " << fd_ctx->fd
-    //     << ", fd ctx's events: " << fd_ctx->events
-    //     << ", event: " << event.events
-    //     << ", left_events: " << left_events << ", op: " << op;
+      //   ELOG_DEBUG(g_logger) << __FUNCTION__ << ", fd: " << event.data.fd
+      //     << ", fd ctx's fd: " << fd_ctx->fd
+      //     << ", fd ctx's events: " << fd_ctx->events
+      //     << ", event: " << event.events
+      //     << ", left_events: " << left_events << ", op: " << op;
       int res2 = epoll_ctl(m_epfd, op, fd_ctx->fd, &event);
       if (res2 != 0) {
         ELOG_ERROR(g_logger)
