@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-05 20:22:15 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-06 21:44:30
+ * @Last Modified time: 2025-04-07 00:33:13
  */
 
 #include "Timer.h"
@@ -33,29 +33,70 @@ bool Timer::Cmp::operator()(const Timer::sptr& lhs,
   return lhs->m_execute_time < rhs->m_execute_time;
 }
 
+bool Timer::cancel() {
+  TimerManager::RWMutexType::WLockGuard wlock(m_timer_mgr->m_mutex);
+  if (nullptr != m_cb) {
+    m_cb = nullptr;
+    auto it = m_timer_mgr->m_timers.find(shared_from_this());
+    m_timer_mgr->m_timers.erase(it);
+    return true;
+  }
+  return false;
+}
+
+bool Timer::refresh() {
+  TimerManager::RWMutexType::WLockGuard wlock(m_timer_mgr->m_mutex);
+  if (nullptr == m_cb)
+    return false;
+  auto it = m_timer_mgr->m_timers.find(shared_from_this());
+  if (it == m_timer_mgr->m_timers.end())
+    return false;
+  m_timer_mgr->m_timers.erase(it);
+  //TODO, 先删除再插入
+  m_execute_time = GetCurrentTimeInMs() + m_period;
+  m_timer_mgr->m_timers.insert(shared_from_this());
+  return true;
+}
+
+bool Timer::reset(uint64_t period, bool from_now) {
+  if (m_period == period && !from_now)
+    return true;
+
+  TimerManager::RWMutexType::WLockGuard wlock(m_timer_mgr->m_mutex);
+  if (nullptr == m_cb)
+    return false;
+  auto it = m_timer_mgr->m_timers.find(shared_from_this());
+  if (it == m_timer_mgr->m_timers.end())
+    return false;
+  m_timer_mgr->m_timers.erase(it);
+
+  uint64_t start{0};
+  if (from_now) {
+    start = GetCurrentTimeInMs();
+  } else {
+    start = m_execute_time - m_period;
+  }
+  m_period = period;
+  m_execute_time = start + m_period;
+  m_timer_mgr->addTimer(shared_from_this(), wlock);
+  return true;
+}
+
 TimerManager::TimerManager() {}
 TimerManager::~TimerManager() {}
 
-void TimerManager::addTimer(uint64_t period, std::function<void()> cb,
-                            bool recurring) {
+Timer::sptr TimerManager::addTimer(uint64_t period, std::function<void()> cb,
+                                   bool recurring) {
   Timer::sptr timer = std::make_shared<Timer>(period, cb, recurring, this);
-  bool at_front{false};
-  {
-    RWMutexType::WLockGuard wlock(m_mutex);  //TODO，是否可以放在{}里？
-    auto it = m_timers.insert(timer).first;
-    if (it == m_timers.begin()) {
-      at_front = true;
-    }
-  }
-
-  if (at_front) {
-    onTimerInsertAtFront();
-  }
+  RWMutexType::WLockGuard wlock(m_mutex);
+  addTimer(timer, wlock);
+  return timer;
 }
 
-void TimerManager::addConditionTimer(uint64_t period, std::function<void()> cb,
-                                     std::weak_ptr<void> weak_cond,
-                                     bool recurring) {
+Timer::sptr TimerManager::addConditionTimer(uint64_t period,
+                                            std::function<void()> cb,
+                                            std::weak_ptr<void> weak_cond,
+                                            bool recurring) {
   auto func = [weak_cond, cb]() -> void {
     auto tmp = weak_cond.lock();
     if (tmp != nullptr) {
@@ -64,6 +105,19 @@ void TimerManager::addConditionTimer(uint64_t period, std::function<void()> cb,
   };
 
   return addTimer(period, func, recurring);
+}
+
+void TimerManager::addTimer(Timer::sptr timer,
+                            TimerManager::RWMutexType::WLockGuard& lock) {
+  auto it = m_timers.insert(timer).first;
+  bool at_front = (it == m_timers.begin()) && !m_tickled;
+  if (at_front) {
+    m_tickled = true;
+  }
+  lock.unlock();
+  if (at_front) {
+    onTimerInsertAtFront();
+  }
 }
 
 uint64_t TimerManager::getNextTimer() {
