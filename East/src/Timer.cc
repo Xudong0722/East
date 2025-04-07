@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-05 20:22:15 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-07 00:33:13
+ * @Last Modified time: 2025-04-07 14:34:28
  */
 
 #include "Timer.h"
@@ -13,7 +13,7 @@ namespace East {
 
 Timer::Timer(uint64_t period, std::function<void()> cb, bool recurring,
              TimerManager* mgr)
-    : m_period(period), m_cb(cb), m_recurring(recurring), m_timer_mgr(mgr) {
+    : m_recurring(recurring), m_period(period), m_cb(cb),  m_timer_mgr(mgr) {
   m_execute_time = GetCurrentTimeInMs() + m_period;
 }
 
@@ -170,4 +170,8 @@ void TimerManager::listExpiredCb(std::vector<std::function<void()>>& cbs) {
   }
 }
 
+bool TimerManager::hasTimer() {
+  RWMutexType::RLockGuard rlock(m_mutex);
+  return !m_timers.empty();
+}
 }  // namespace East

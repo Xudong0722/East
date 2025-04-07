@@ -2,13 +2,14 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-01 22:55:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-06 10:35:29
+ * @Last Modified time: 2025-04-07 14:16:16
  */
 
 #include "Scheduler.h"
+#include "Timer.h"
 
 namespace East {
-class IOManager : public Scheduler {
+class IOManager : public Scheduler, public TimerManager {
  public:
   using sptr = std::shared_ptr<IOManager>;
   using RWMutexType = RWLock;
@@ -53,11 +54,16 @@ class IOManager : public Scheduler {
 
   static IOManager* GetThis();
 
+  bool stopping(uint64_t& time_out);
+
  protected:
   //Scheduler virtual functions:
   void tickle() override;
   void idle() override;
   bool stopping() override;
+
+  //TimerManager virtual functions:
+  void onTimerInsertAtFront() override;
 
  private:
   int m_epfd{-1};

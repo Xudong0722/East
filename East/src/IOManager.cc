@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-01 22:55:58 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-02 23:24:48
+ * @Last Modified time: 2025-04-07 14:31:15
  */
 
 #include "IOManager.h"
@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/epoll.h>
 #include <unistd.h>
+#include <functional>
 #include "Elog.h"
 #include "Macro.h"
 
@@ -281,6 +282,11 @@ IOManager* IOManager::GetThis() {
   return dynamic_cast<IOManager*>(Scheduler::GetThis());
 }
 
+bool IOManager::stopping(uint64_t& time_out) {
+  time_out = getNextTimer();
+  return time_out == ~0ull && m_pendingEventCount == 0 && Scheduler::stopping();
+}
+
 void IOManager::tickle() {
   if (!hasIdleThreads())
     return;
@@ -295,15 +301,23 @@ void IOManager::idle() {
   std::unique_ptr<epoll_event[]> ep_events(new epoll_event[MAX_EVENTS]);
 
   while (true) {
-    if (stopping()) {
+    uint64_t next_timeout{0};
+    if (stopping(next_timeout)) {
+
       ELOG_INFO(g_logger) << "IOManager stopping";
       break;
     }
 
     int res{0};
     do {
-      constexpr int MAX_TIMEOUT = 5000;
-      res = epoll_wait(m_epfd, ep_events.get(), MAX_EVENTS, MAX_TIMEOUT);
+      constexpr int MAX_TIMEOUT = 3000;
+      //看看现在最靠前的定时器是否小于这个超时时间，取较小的一个
+      if (next_timeout != ~0ull)
+        next_timeout = std::min(MAX_TIMEOUT, (int)next_timeout);
+      else
+        next_timeout = MAX_EVENTS;
+
+      res = epoll_wait(m_epfd, ep_events.get(), MAX_EVENTS, (int)next_timeout);
 
       if (res < 0 && errno == EINTR) {
         continue;
@@ -311,6 +325,11 @@ void IOManager::idle() {
         break;
       }
     } while (true);
+
+    std::vector<std::function<void()>> timer_cbs{};
+    listExpiredCb(timer_cbs);
+    schedule(timer_cbs.begin(),
+             timer_cbs.end());  //将符合条件的timer的回调放进去
     //ELOG_DEBUG(g_logger) << "idle: epoll wait, res: " << res;
     for (int i = 0; i < res; ++i) {
       epoll_event& event = ep_events[i];
@@ -369,7 +388,13 @@ void IOManager::idle() {
 }
 
 bool IOManager::stopping() {
-  return Scheduler::stopping() && m_pendingEventCount == 0;
+  //结束：scheduler结束 && 没有要执行的事件 && 没有要执行的定时器
+  //return Scheduler::stopping() && m_pendingEventCount == 0 && !hasTimer();
+  uint64_t time_out{0};
+  return stopping(time_out);
 }
 
+void IOManager::onTimerInsertAtFront() {
+  tickle();
+}
 };  // namespace East

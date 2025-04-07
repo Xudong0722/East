@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-05 20:22:11 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-07 00:27:48
+ * @Last Modified time: 2025-04-07 14:08:54
  */
 
 #include <functional>
@@ -66,6 +66,8 @@ class TimerManager {
 
   //获取所有已经超时的定时器的回调函数
   void listExpiredCb(std::vector<std::function<void()>>& cbs);
+
+  bool hasTimer();
 
  protected:
   virtual void onTimerInsertAtFront() = 0;

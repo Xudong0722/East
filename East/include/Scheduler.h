@@ -41,6 +41,21 @@ class Scheduler {
   //void switchTo(int thread_id = -1);  //切换到某个线程中执行
   //std::ostream& dump(std::ostream& os);
 
+ private:
+  template <class Task>
+  bool scheduleNoLock(Task&& task, int thread_id = -1) {
+    bool need_tickle = m_tasks.empty();
+    ExecuteTask et(std::forward<Task>(task), thread_id);
+    if (et.fiber || et.cb) {
+      m_tasks.emplace_back(std::move(et));
+      ELOG_DEBUG(ELOG_NAME("system"))
+          << "Add new task, type: " << typeid(decltype(task)).name()
+          << ", task id: " << et.getTaskId() << ", thread id: " << thread_id;
+    }
+    return need_tickle;
+  }
+
+ public:
   template <class Task>
   void schedule(Task&& task, int thread_id = -1) {
     bool need_tickle = false;
@@ -59,27 +74,13 @@ class Scheduler {
     {
       MutexType::LockGuard lock(m_mutex);
       while (begin != end) {
-        need_tickle = scheduleNolock(&*begin, -1) || need_tickle;
+        need_tickle = scheduleNoLock(&*begin, -1) || need_tickle;
         ++begin;
       }
     }
     if (need_tickle) {
       tickle();
     }
-  }
-
- private:
-  template <class Task>
-  bool scheduleNoLock(Task&& task, int thread_id = -1) {
-    bool need_tickle = m_tasks.empty();
-    ExecuteTask et(std::forward<Task>(task), thread_id);
-    if (et.fiber || et.cb) {
-      m_tasks.emplace_back(std::move(et));
-      ELOG_DEBUG(ELOG_NAME("system"))
-          << "Add new task, type: " << typeid(decltype(task)).name()
-          << ", task id: " << et.getTaskId() << ", thread id: " << thread_id;
-    }
-    return need_tickle;
   }
 
  protected:
