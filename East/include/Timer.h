@@ -14,7 +14,7 @@ namespace East {
 class TimerManager;
 class Timer : public std::enable_shared_from_this<Timer> {
   friend class TimerManager;
-  
+
  public:
   using sptr = std::shared_ptr<Timer>;
   Timer(uint64_t period, std::function<void()> cb, bool recurring,

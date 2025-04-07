@@ -7,6 +7,7 @@
 
 #include "Timer.h"
 #include <algorithm>
+#include "Elog.h"
 #include "util.h"
 
 namespace East {
@@ -66,19 +67,23 @@ bool Timer::reset(uint64_t period, bool from_now) {
   if (nullptr == m_cb)
     return false;
   auto it = m_timer_mgr->m_timers.find(shared_from_this());
+  auto myself =
+      shared_from_this();  //add ref count before erase, make sure current timer is alive
   if (it == m_timer_mgr->m_timers.end())
     return false;
   m_timer_mgr->m_timers.erase(it);
 
   uint64_t start{0};
   if (from_now) {
+
     start = GetCurrentTimeInMs();
   } else {
     start = m_execute_time - m_period;
   }
   m_period = period;
   m_execute_time = start + m_period;
-  m_timer_mgr->addTimer(shared_from_this(), wlock);
+  //ELOG_INFO(ELOG_ROOT()) << "recurring: " << m_recurring << ", this: " << (void*)this << ", ref count: " << myself.use_count();  //TODO, why core dump when I add this line?, we need to add ref count before erase
+  m_timer_mgr->addTimer(myself, wlock);
   return true;
 }
 
@@ -136,7 +141,6 @@ uint64_t TimerManager::getNextTimer() {
 }
 
 void TimerManager::listExpiredCb(std::vector<std::function<void()>>& cbs) {
-  const uint64_t now_ms = GetCurrentTimeInMs();
   {
     RWLock::RLockGuard rlock(m_mutex);
     if (m_timers.empty()) {
@@ -149,9 +153,17 @@ void TimerManager::listExpiredCb(std::vector<std::function<void()>>& cbs) {
     return;
   }
 
+  const uint64_t now_ms = GetCurrentTimeInMs();
+
+  if (now_ms < (*m_timers.begin())->m_execute_time) {
+    //当前没有过期的定时器
+    return;
+  }
+
   Timer::sptr timer_for_now = std::make_shared<Timer>(now_ms);
   auto it = std::lower_bound(begin(m_timers), end(m_timers), timer_for_now);
   //lower_bound是找到第一个不小于timer_for_now的元素，我们还得加上等于timer_for_now的
+
   while (it != m_timers.end() && (*it)->m_execute_time == now_ms) {
     ++it;
   }
@@ -160,14 +172,28 @@ void TimerManager::listExpiredCb(std::vector<std::function<void()>>& cbs) {
   std::vector<Timer::sptr> expired(m_timers.begin(), it);
   cbs.resize(expired.size());
   m_timers.erase(m_timers.begin(), it);
+  // ELOG_INFO(ELOG_ROOT()) << "------------------"
+  //                        << "timer size, before: " << m_timers.size()
+  //                        << ", expired size: " << expired.size();
+
   auto i = 0u;
   for (const auto& p : expired) {
     cbs[i] = p->m_cb;
     if (p->m_recurring) {
-      p->m_execute_time += p->m_period;
+      // auto old_execute_time = p->m_execute_time;
+      p->m_execute_time = now_ms + p->m_period;
+      // ELOG_INFO(ELOG_ROOT())
+      //     << "recurring timer, old execute time: " << old_execute_time
+      //     << ", new execute time: " << p->m_execute_time
+      //     << " , period: " << p->m_period << ", now: " << now_ms;
       m_timers.insert(p);
+    } else {
+      p->m_cb = nullptr;  //清空回调函数
     }
   }
+  // ELOG_INFO(ELOG_ROOT()) << "------------------"
+  //                        << "timer size, after: " << m_timers.size()
+  //                        << ", expired size: " << expired.size();
 }
 
 bool TimerManager::hasTimer() {

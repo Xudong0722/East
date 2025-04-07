@@ -57,12 +57,13 @@ void test_timer() {
       [&timer]() {
         static int i = 0;
         ELOG_INFO(g_logger) << "timer callback , i = " << i;
-        if (++i > 5) {
-          timer->cancel();
+        if (++i == 5) {
+          //timer->cancel();  //test pass
+          timer->reset(2000, true);
         }
       },
       true);
-  io_mgr.start();
+  // io_mgr.start();
 }
 
 int main() {

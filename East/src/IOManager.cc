@@ -317,6 +317,7 @@ void IOManager::idle() {
       else
         next_timeout = MAX_EVENTS;
 
+      //ELOG_INFO(g_logger) << "epoll wait, timeout: " << next_timeout;
       res = epoll_wait(m_epfd, ep_events.get(), MAX_EVENTS, (int)next_timeout);
 
       if (res < 0 && errno == EINTR) {
@@ -328,8 +329,13 @@ void IOManager::idle() {
 
     std::vector<std::function<void()>> timer_cbs{};
     listExpiredCb(timer_cbs);
-    schedule(timer_cbs.begin(),
-             timer_cbs.end());  //将符合条件的timer的回调放进去
+    //ELOG_INFO(g_logger) << "expired timer count: " << timer_cbs.size();
+    if (!timer_cbs.empty()) {
+      schedule(timer_cbs.begin(),
+               timer_cbs.end());  //将符合条件的timer的回调放进去
+      timer_cbs.clear();
+    }
+
     //ELOG_DEBUG(g_logger) << "idle: epoll wait, res: " << res;
     for (int i = 0; i < res; ++i) {
       epoll_event& event = ep_events[i];
