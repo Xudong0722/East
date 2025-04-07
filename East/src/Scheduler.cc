@@ -181,7 +181,7 @@ void Scheduler::run() {
       tickle();
     }
     if (task.isValidTask())
-      ELOG_INFO(g_logger) << "Hanlded task in queue, id: " << task.getTaskId()
+      ELOG_DEBUG(g_logger) << "Hanlded task in queue, id: " << task.getTaskId()
                           << ", task type: " << task.getTaskType();
     //如果协程的状态可以执行，则执行
     if (task.getTaskType() == ExecuteTask::FIBER &&

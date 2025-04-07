@@ -50,6 +50,22 @@ void test_iomgr() {
   io_mgr.schedule(&test_fiber);
 }
 
+void test_timer() {
+  East::IOManager io_mgr(2);
+  East::Timer::sptr timer = io_mgr.addTimer(
+      1000,
+      [&timer]() {
+        static int i = 0;
+        ELOG_INFO(g_logger) << "timer callback , i = " << i;
+        if (++i > 5) {
+          timer->cancel();
+        }
+      },
+      true);
+  io_mgr.start();
+}
+
 int main() {
-  test_iomgr();
+  //test_iomgr();
+  test_timer();
 }

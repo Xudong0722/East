@@ -14,13 +14,16 @@ namespace East {
 class TimerManager;
 class Timer : public std::enable_shared_from_this<Timer> {
   friend class TimerManager;
-
+  
  public:
   using sptr = std::shared_ptr<Timer>;
   Timer(uint64_t period, std::function<void()> cb, bool recurring,
         TimerManager* manager);
   Timer(uint64_t execute_time);
+  Timer(uint64_t period, std::function<void()> cb, bool recurring,
+        std::weak_ptr<void> weak_cond, TimerManager* manager);
 
+ public:
   bool cancel();
   bool refresh();
   bool reset(uint64_t period, bool from_now);

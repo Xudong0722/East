@@ -13,7 +13,7 @@ namespace East {
 
 Timer::Timer(uint64_t period, std::function<void()> cb, bool recurring,
              TimerManager* mgr)
-    : m_recurring(recurring), m_period(period), m_cb(cb),  m_timer_mgr(mgr) {
+    : m_recurring(recurring), m_period(period), m_cb(cb), m_timer_mgr(mgr) {
   m_execute_time = GetCurrentTimeInMs() + m_period;
 }
 
@@ -125,7 +125,7 @@ uint64_t TimerManager::getNextTimer() {
   if (m_timers.empty()) {
     return ~0ull;
   }
-
+  m_tickled = false;
   const Timer::sptr& next = *m_timers.begin();
   const uint64_t now_ms = GetCurrentTimeInMs();
   if (now_ms >= next->m_execute_time) {
