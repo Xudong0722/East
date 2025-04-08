@@ -59,7 +59,8 @@ void test_timer() {
         ELOG_INFO(g_logger) << "timer callback , i = " << i;
         if (++i == 5) {
           //timer->cancel();  //test pass
-          timer->reset(2000, true);
+          //timer->reset(2000, true); //test pass
+          //timer->refresh();  //test pass
         }
       },
       true);

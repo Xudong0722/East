@@ -52,10 +52,11 @@ bool Timer::refresh() {
   auto it = m_timer_mgr->m_timers.find(shared_from_this());
   if (it == m_timer_mgr->m_timers.end())
     return false;
+  auto myself = shared_from_this();
   m_timer_mgr->m_timers.erase(it);
   //TODO, 先删除再插入
   m_execute_time = GetCurrentTimeInMs() + m_period;
-  m_timer_mgr->m_timers.insert(shared_from_this());
+  m_timer_mgr->m_timers.insert(myself);
   return true;
 }
 
@@ -75,7 +76,6 @@ bool Timer::reset(uint64_t period, bool from_now) {
 
   uint64_t start{0};
   if (from_now) {
-
     start = GetCurrentTimeInMs();
   } else {
     start = m_execute_time - m_period;
