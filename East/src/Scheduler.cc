@@ -2,10 +2,11 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-01 22:53:33 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-02 16:34:18
+ * @Last Modified time: 2025-04-09 01:25:17
  */
 #include "Scheduler.h"
 #include "Elog.h"
+#include "Hook.h"
 #include "Macro.h"
 
 namespace East {
@@ -132,7 +133,7 @@ void Scheduler::stop() {
 void Scheduler::run() {
   ELOG_INFO(g_logger) << "run";
   SetThis(this);
-
+  set_hook_enable(true);  //设置当前线程需要hook, 我们自己的scheduler需要hook
   if (East::GetThreadId() != m_rootThreadId) {
     t_scheduler_fiber =
         Fiber::GetThis()
@@ -181,9 +182,9 @@ void Scheduler::run() {
       tickle();
     }
     if (task.isValidTask())
-      ELOG_DEBUG(g_logger) << "Hanlded task in queue, id: " << task.getTaskId()
+      ELOG_INFO(g_logger) << "Hanlded task in queue, id: " << task.getTaskId()
                            << ", task type: " << task.getTaskType();
-    //如果协程的状态可以执行，则执行
+    //如果协程的状态可以执行，则执行                          //TODO: 这里的状态判断有点问题, 如果是hold状态，现在不一定能执行，因为可能有定时器
     if (task.getTaskType() == ExecuteTask::FIBER &&
         (task.fiber->getState() != Fiber::TERM &&
          task.fiber->getState() != Fiber::EXCEPT)) {

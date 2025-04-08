@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-03-24 21:45:15 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-02 15:32:47
+ * @Last Modified time: 2025-04-09 01:26:42
  */
 
 #include "Fiber.h"
@@ -151,9 +151,9 @@ void Fiber::yield() {
     SetThis(Scheduler::GetMainFiber());
   else
     SetThis(t_master_fiber.get());  //当前协程交还给主协程
-  if (getState() != TERM) {
-    setState(READY);
-  }
+  // if (getState() != TERM) {
+  //   setState(READY);                //TODO， 这里应该设置成什么状态？
+  // }
 
   if (!m_run_in_scheduler) {
     if (swapcontext(&m_ctx,
@@ -161,6 +161,7 @@ void Fiber::yield() {
       EAST_ASSERT2(false, "swapcontext: cur fiber to master fiber failed.");
     }
   } else {
+    //ELOG_INFO(ELOG_ROOT()) << "cur id: " << m_id << ", main fiber id: " << Scheduler::GetMainFiber()->m_id;
     if (swapcontext(
             &m_ctx,
             &Scheduler::GetMainFiber()->m_ctx)) {  //old context, new context
@@ -213,7 +214,7 @@ void Fiber::YieldToReady() {
 void Fiber::YieldToHold() {
   Fiber::sptr cur_fiber = GetThis();
   EAST_ASSERT(cur_fiber->getState() == EXEC);
-  cur_fiber->setState(HOLD);
+  //cur_fiber->setState(HOLD);  //TODO
   cur_fiber->yield();
 }
 
