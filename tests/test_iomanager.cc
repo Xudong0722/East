@@ -51,7 +51,7 @@ void test_iomgr() {
 }
 
 void test_timer() {
-  East::IOManager io_mgr(2);
+  East::IOManager io_mgr(1, true);
   East::Timer::sptr timer = io_mgr.addTimer(
       1000,
       [&timer]() {
@@ -79,10 +79,35 @@ void test_timer() {
         }
       },
       true);
+
+      East::Timer::sptr timer3 = io_mgr.addTimer(
+        3000,
+        [&timer3]() {
+          static int k = 0;
+          ELOG_INFO(g_logger) << "timer3 callback , k = " << k;
+          if (++k == 5) {
+            //timer2->cancel();  //test pass
+            //timer2->reset(2000, true); //test pass
+            //timer2->refresh();  //test pass
+            timer3->cancel();
+          }
+        },
+        true);
   // io_mgr.start();
 }
 
+void execute_per_one_ms() {
+  East::IOManager io_mgr(1, true);
+  East::Timer::sptr timer = io_mgr.addTimer(
+    1,
+    [&timer]() {
+      static int k = 0;
+      ELOG_INFO(g_logger) << "execute_per_one_ms: k = " << k++;
+    },
+    true);
+}
 int main() {
   //test_iomgr();
-  test_timer();
+  // test_timer();
+  execute_per_one_ms();
 }
