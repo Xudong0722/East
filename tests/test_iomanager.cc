@@ -61,6 +61,21 @@ void test_timer() {
           //timer->cancel();  //test pass
           //timer->reset(2000, true); //test pass
           //timer->refresh();  //test pass
+          timer->reset(2000, true);
+        }
+      },
+      true);
+
+  East::Timer::sptr timer2 = io_mgr.addTimer(
+      2000,
+      [&timer2]() {
+        static int j = 0;
+        ELOG_INFO(g_logger) << "timer2 callback , j = " << j;
+        if (++j == 5) {
+          //timer2->cancel();  //test pass
+          //timer2->reset(2000, true); //test pass
+          //timer2->refresh();  //test pass
+          timer2->reset(1000, true);
         }
       },
       true);

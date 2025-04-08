@@ -161,9 +161,11 @@ void TimerManager::listExpiredCb(std::vector<std::function<void()>>& cbs) {
   }
 
   Timer::sptr timer_for_now = std::make_shared<Timer>(now_ms);
-  auto it = std::lower_bound(begin(m_timers), end(m_timers), timer_for_now);
-  //lower_bound是找到第一个不小于timer_for_now的元素，我们还得加上等于timer_for_now的
-
+  // auto it = std::lower_bound(m_timers.begin(), m_timers.end(), timer_for_now);  //wrong！需要使用set自带的lower_bound
+  auto it = m_timers.lower_bound(timer_for_now);
+  //找到第一个不小于timer_for_now的元素，我们还得加上等于timer_for_now的
+  // ELOG_INFO(ELOG_ROOT()) << "now :" << now_ms << ", it index: " << std::distance(m_timers.begin(), it)
+  //                        << ", timer size: " << m_timers.size();
   while (it != m_timers.end() && (*it)->m_execute_time == now_ms) {
     ++it;
   }
