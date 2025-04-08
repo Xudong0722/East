@@ -323,3 +323,12 @@ bool cancelAll(int fd);                         取消某个fd所有的事件并
 
 
 
+
+
+## Hook模块
+
+目前已经hook的函数：
+sleep()
+usleep()
+
+测试中发现我们的Fiber有一点问题，TODO
