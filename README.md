@@ -327,6 +327,12 @@ bool cancelAll(int fd);                         取消某个fd所有的事件并
 
 ## Hook模块
 
+基于C语言全局符号唯一，我们可以提前link自己的动态库，之后链接libc的时候由于符号已经存在，我们就会调用到我们实现的函数中去了，但并不是所有的场景都需要调用我们hook的函数，所以我们利用dlsym将libc中的符号的函数地址保存到我们提前声明的函数指针中，借助这个函数指针，我们可以调用原先的库函数。
+
+void *dlsym(void *handle, const char *symbol);
+eg: dlsym(RLDT_NEXT, "sleep")
+RLDT_NEXT的含义：下一个含有这个符号的动态库运行时的地址，而不是下一个加载的库,ref：[理解RLDT_NEXT](https://csstormq.github.io/blog/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%B3%BB%E7%BB%9F%E7%AF%87%E4%B9%8B%E9%93%BE%E6%8E%A5%EF%BC%8816%EF%BC%89%EF%BC%9A%E7%9C%9F%E6%AD%A3%E7%90%86%E8%A7%A3%20RTLD_NEXT%20%E7%9A%84%E4%BD%9C%E7%94%A8)
+
 目前已经hook的函数：
 sleep()
 usleep()
