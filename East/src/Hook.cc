@@ -14,7 +14,28 @@ namespace East {
 static thread_local bool t_hook_enable = false;
 
 //宏定义：要hook的所有函数
-#define HOOK_FUNC(func) func(sleep) func(usleep)
+#define HOOK_FUNC(func) \
+  func(sleep)  \
+  func(usleep) \
+  func(nanosleep) \
+  func(socket) \
+  func(connect) \
+  func(accept) \
+  func(read) \
+  func(readv) \
+  func(recv) \
+  func(recvfrom) \
+  func(recvmsg) \
+  func(write) \
+  func(writev) \
+  func(send) \
+  func(sendto) \
+  func(sendmsg) \
+  func(close) \
+  func(fcntl) \
+  func(ioctl) \
+  func(getsockopt) \
+  func(setsockopt) 
 
 void hook_init() {
   static bool s_inited = false;
