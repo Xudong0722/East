@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-10 00:13:39 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-10 00:26:31
+ * @Last Modified time: 2025-04-10 00:31:35
  */
 
 #include "Thread.h"
@@ -17,7 +17,7 @@ public:
     FdContext(int fd);
     ~FdContext();
 
-    void init();
+    bool init();
     bool isInit() const { return m_init;}
     bool isSocket() const { return m_isSocket;}
 
