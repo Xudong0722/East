@@ -64,7 +64,7 @@ FdManager::FdManager() {
 FdManager::~FdManager() {}
 
 FileDescriptor::sptr FdManager::getFd(int fd,
-                                      bool create_when_notfound = false) {
+                                      bool create_when_notfound) {
   if (fd < 0)
     return nullptr;
   {
@@ -106,7 +106,7 @@ void FdManager::deleteFd(int fd) {
   // }
 
   RWMutexType::WLockGuard wlock(m_mutex);
-  if (fd >= m_fds.size()) {
+  if (fd >= (int)m_fds.size()) {
     return;
   }
   m_fds[fd].reset();
