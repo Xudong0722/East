@@ -7,6 +7,7 @@
 
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <algorithm>
 #include "FdManager.h"
 
 namespace East
@@ -64,10 +65,48 @@ namespace East
     FdManager::~FdManager() {}
     
     FdContext::sptr FdManager::getFd(int fd, bool create_when_notfound = false) {
+        if(fd < 0) return nullptr;
+        {
+            RWMutexType::RLockGuard rlock(m_mutex);
+            if(fd >= (int)m_fds.size()) {
+                if(!create_when_notfound){
+                    return nullptr;
+                }
+            }else{
+                if(nullptr == m_fds.at(fd)) {
+                    if(!create_when_notfound){
+                        return nullptr;
+                    }
+                }else{
+                    return m_fds.at(fd);
+                }
+            }
+        }
 
+        RWMutexType::WLockGuard wlock(m_mutex);
+        auto new_fd = std::make_shared<FdContext>(fd);
+        
+        auto tmp = m_fds;
+        tmp.resize(fd * 1.5);  //now, fd * 1.5 > m_fds.size()
+        copy(m_fds.begin(), m_fds.end(), tmp.begin());
+        m_fds.swap(tmp);
+        m_fds[fd] = std::move(new_fd);
+        return m_fds[fd];
     }
 
     void FdManager::deleteFd(int fd) {
+        if(fd < 0) return ;
+        // {
+        //     RWMutexType::RLockGuard rlock(m_mutex);
+        //     if(fd >= m_fds.size()) {
+        //         return ;
+        //     }
+        // }
 
+        RWMutexType::WLockGuard wlock(m_mutex);
+        if(fd >= m_fds.size()) {
+            return ;
+        }
+        m_fds[fd].reset();
     }
 } // namespace East

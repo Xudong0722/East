@@ -6,7 +6,8 @@
  */
 
 #include "Thread.h"
-
+#include "singleton.h"
+#include "Noncopyable.h"
 
 namespace East
 {
@@ -47,9 +48,9 @@ private:
     uint64_t m_sendTimeout;
 };
 
-class FdManager {
+class FdManager: public noncopymoveable {
 public:
-    using MutexType = Mutex;
+    using RWMutexType = RWLock;
     FdManager();
     ~FdManager();
     
@@ -57,7 +58,9 @@ public:
     void deleteFd(int fd);
 
 private:
-    MutexType m_mutex;
+    RWMutexType m_mutex;
     std::vector<FdContext::sptr> m_fds;
 };
+
+using FdMgr = Singleton<FdManager>;
 } // namespace East

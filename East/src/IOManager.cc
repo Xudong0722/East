@@ -268,7 +268,7 @@ bool IOManager::cancelAll(int fd) {
 }
 
 void IOManager::contextResize(size_t sz) {
-  m_fdContexts.resize(sz);
+  m_fdContexts.resize(sz);  //TODO, 这里似乎有点问题， 如果引起realloc的话， 之前的fd_ctx会被释放掉
 
   for (size_t i = 0; i < m_fdContexts.size(); ++i) {
     if (nullptr == m_fdContexts[i]) {
