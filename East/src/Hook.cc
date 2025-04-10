@@ -9,6 +9,7 @@
 #include <dlfcn.h>
 #include "Fiber.h"
 #include "IOManager.h"
+#include "FdManager.h"
 
 namespace East {
 static thread_local bool t_hook_enable = false;
@@ -45,6 +46,56 @@ bool is_hook_enable() {
 }
 void set_hook_enable(bool enable) {
   t_hook_enable = enable;
+}
+
+//将非阻塞的IO调用函数改成协程异步调用，可以指定超时时间
+template<class OriginalFunc, class ...OriginalFuncParams>
+ssize_t do_io(int fd, OriginalFunc func, const char* hook_func_name, uint32_t event
+    , int timeout_so, OriginalFuncParams&&... params) {
+  if(!is_hook_enable()) {
+    //调用原始接口
+    return func(fd, std::forward<OriginalFuncParams>(params)...);
+  }
+
+  //获取fd状态信息
+  auto fd_status = FdMgr::GetInst()->getFd(fd);
+  if(nullptr == fd_status) {
+    return func(fd, std::forward<OriginalFuncParams>(params)...);
+  }
+
+  //EBADF: Bad file descriptor
+  if(fd_status->isClosed()) {
+    errno = EBADF;
+    return -1;
+  }
+  
+  //如果用户没有设置过这个fd是非阻塞的或者这个fd不是socket，就调用原函数
+  if(!fd_status->isSocket() || !fd_status->isUserNonBlock()) {
+    return func(fd, std::forward<OriginalFuncParams>(params)...);
+  }
+
+  uint64_t timeout{0};
+  if(timeout_so == SO_SNDTIMEO) {
+    timeout = fd_status->getSendTimeout();
+  }else if(timeout_so == SO_RECVTIMEO) {
+    timeout = fd_status->getRecvTimeout();
+  }
+
+retry:
+
+  ssize_t res = func(fd, std::forward<OriginalFuncParams>(params)...);
+  while(res == -1 && errno == EINTR) { 
+    //如果我们的调用被中断了，继续调用
+    res = func(fd, std::forward<OriginalFuncParams>(params)...);
+  }
+
+  if(res == -1 && errno == EAGAIN) {
+    //非阻塞IO，常见资源不可用，所以我们可以通过协程调度，设置一个超时时间，之后再次调用
+    
+    auto io_mgr = East::IOManager::GetThis();
+    auto Timer::sptr
+  }
+  return res;
 }
 }  // namespace East
 
@@ -94,4 +145,36 @@ int usleep(useconds_t usec) {
   fiber->yield();
   return 0;
 }
+
+int nanosleep(const struct timespec* req, struct timespec* rem) {
+  if(!East::is_hook_enable()) {
+    return nanosleep_f(req, rem);
+  }
+
+  auto fiber = East::Fiber::GetThis();
+  auto io_mgr = East::IOManager::GetThis();
+  if(nullptr != fiber && nullptr != io_mgr) {
+    io_mgr->addTimer(req->tv_sec * 1000 + req->tv_nsec / 1000000,
+      [io_mgr, fiber]() {
+        if(nullptr != io_mgr) {
+          io_mgr->schedule(fiber);
+        }
+      });
+  }
+  fiber->yield();
+  return 0;
+}
+
+int socket(int domain, int type, int protocol) {
+  if(!East::is_hook_enable()) {
+    return socket_f(domain, type, protocol);
+  }
+
+  int fd = socket_f(domain, type, protocol);
+  if(fd < 0) return fd;
+
+  East::FdMgr::GetInst()->getFd(fd, true);   //放到FdManager中管理，方便后续判断
+  return fd;
+}
+
 }
