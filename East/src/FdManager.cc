@@ -11,7 +11,7 @@
 #include <algorithm>
 
 namespace East {
-FdContext::FdContext(int fd)
+FileDescriptor::FileDescriptor(int fd)
     : m_init(false),
       m_isSocket(false),
       m_sysNonBlock(false),
@@ -23,9 +23,9 @@ FdContext::FdContext(int fd)
   init();
 }
 
-FdContext::~FdContext() {}
+FileDescriptor::~FileDescriptor() {}
 
-bool FdContext::init() {
+bool FileDescriptor::init() {
   if (m_init) {
     return true;
   }
@@ -63,7 +63,8 @@ FdManager::FdManager() {
 
 FdManager::~FdManager() {}
 
-FdContext::sptr FdManager::getFd(int fd, bool create_when_notfound = false) {
+FileDescriptor::sptr FdManager::getFd(int fd,
+                                      bool create_when_notfound = false) {
   if (fd < 0)
     return nullptr;
   {
@@ -84,7 +85,7 @@ FdContext::sptr FdManager::getFd(int fd, bool create_when_notfound = false) {
   }
 
   RWMutexType::WLockGuard wlock(m_mutex);
-  auto new_fd = std::make_shared<FdContext>(fd);
+  auto new_fd = std::make_shared<FileDescriptor>(fd);
 
   auto tmp = m_fds;
   tmp.resize(fd * 1.5);  //now, fd * 1.5 > m_fds.size()

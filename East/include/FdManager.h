@@ -10,12 +10,12 @@
 #include "singleton.h"
 
 namespace East {
-class FdContext : public std::enable_shared_from_this<FdContext> {
+class FileDescriptor : public std::enable_shared_from_this<FileDescriptor> {
  public:
-  using sptr = std::shared_ptr<FdContext>;
+  using sptr = std::shared_ptr<FileDescriptor>;
 
-  FdContext(int fd);
-  ~FdContext();
+  FileDescriptor(int fd);
+  ~FileDescriptor();
 
   bool init();
   bool isInit() const { return m_init; }
@@ -53,12 +53,12 @@ class FdManager : public noncopymoveable {
   FdManager();
   ~FdManager();
 
-  FdContext::sptr getFd(int fd, bool create_when_notfound = false);
+  FileDescriptor::sptr getFd(int fd, bool create_when_notfound = false);
   void deleteFd(int fd);
 
  private:
   RWMutexType m_mutex;
-  std::vector<FdContext::sptr> m_fds;
+  std::vector<FileDescriptor::sptr> m_fds;
 };
 
 using FdMgr = Singleton<FdManager>;
