@@ -5,13 +5,14 @@
  * @Last Modified time: 2025-04-07 14:31:15
  */
 
-#include "IOManager.h"
+#include <algorithm>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <unistd.h>
 #include <functional>
+#include "IOManager.h"
 #include "Elog.h"
 #include "Macro.h"
 
@@ -96,7 +97,7 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
   } else {
     lock.unlock();
     RWMutexType::WLockGuard lock1(m_mutex);
-    contextResize(fd * 1.5);
+    SafeContextResize(fd * 1.5);
     fd_ctx = m_fdContexts[fd];
   }
   //ELOG_INFO(g_logger) << "epfd: " << m_epfd << ", fd: " << fd <<", event: " << event <<", fd event: " << fd_ctx->events;
@@ -268,11 +269,31 @@ bool IOManager::cancelAll(int fd) {
 }
 
 void IOManager::contextResize(size_t sz) {
-  m_fdContexts.resize(sz);  //TODO, 这里似乎有点问题， 如果引起realloc的话， 之前的fd_ctx会被释放掉
+  //初始化的时候可以调用这个方法， 后续addevent调用safeContextResize
+  m_fdContexts.resize(sz);
 
   for (size_t i = 0; i < m_fdContexts.size(); ++i) {
     if (nullptr == m_fdContexts[i]) {
-      m_fdContexts[i] = new FdContext;
+      m_fdContexts[i] = new(std::nothrow) FdContext;
+      m_fdContexts[i]->fd = i;
+    }
+  }
+}
+
+void IOManager::SafeContextResize(size_t sz) {
+  if(sz <= m_fdContexts.size()) {
+    m_fdContexts.resize(sz);
+    return ;
+  }
+
+  //maybe reallocate
+  auto tmp = m_fdContexts;
+  tmp.resize(sz);
+  copy(m_fdContexts.begin(), m_fdContexts.end(), tmp.begin());
+  m_fdContexts.swap(tmp);
+  for(size_t i = 0; i<m_fdContexts.size(); ++i) {
+    if(nullptr == m_fdContexts[i]) {
+      m_fdContexts[i] = new(std::nothrow) FdContext;
       m_fdContexts[i]->fd = i;
     }
   }

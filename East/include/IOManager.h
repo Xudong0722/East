@@ -51,6 +51,7 @@ class IOManager : public Scheduler, public TimerManager {
   bool cancelEvent(int fd, Event event);             //TODO
   bool cancelAll(int fd);                            //TODO
   void contextResize(size_t sz);
+  void SafeContextResize(size_t sz);
 
   static IOManager* GetThis();
 
