@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-08 23:00:31 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-09 01:27:30
+ * @Last Modified time: 2025-04-10 21:01:19
  */
 
 #include "Hook.h"
@@ -48,6 +48,10 @@ void set_hook_enable(bool enable) {
   t_hook_enable = enable;
 }
 
+struct timer_info {
+  int cancelled{0};
+};
+
 //将非阻塞的IO调用函数改成协程异步调用，可以指定超时时间
 template<class OriginalFunc, class ...OriginalFuncParams>
 ssize_t do_io(int fd, OriginalFunc func, const char* hook_func_name, uint32_t event
@@ -69,8 +73,8 @@ ssize_t do_io(int fd, OriginalFunc func, const char* hook_func_name, uint32_t ev
     return -1;
   }
   
-  //如果用户没有设置过这个fd是非阻塞的或者这个fd不是socket，就调用原函数
-  if(!fd_status->isSocket() || !fd_status->isUserNonBlock()) {
+  //如果这个fd不是socket或者用户之前已经设置过这个fd是非阻塞的，直接调用原函数即可
+  if(!fd_status->isSocket() || fd_status->isUserNonBlock()) {
     return func(fd, std::forward<OriginalFuncParams>(params)...);
   }
 
@@ -80,7 +84,8 @@ ssize_t do_io(int fd, OriginalFunc func, const char* hook_func_name, uint32_t ev
   }else if(timeout_so == SO_RECVTIMEO) {
     timeout = fd_status->getRecvTimeout();
   }
-
+  
+  std::shared_ptr<timer_info> tinfo = std::make_shared<timer_info>();
 retry:
 
   ssize_t res = func(fd, std::forward<OriginalFuncParams>(params)...);
@@ -93,7 +98,9 @@ retry:
     //非阻塞IO，常见资源不可用，所以我们可以通过协程调度，设置一个超时时间，之后再次调用
     
     auto io_mgr = East::IOManager::GetThis();
-    auto Timer::sptr
+
+    if(timeout != (uint64_t)-1)
+    auto Timer::sptr = io_mgr->addConditionTimer()
   }
   return res;
 }
