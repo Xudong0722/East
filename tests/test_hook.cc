@@ -13,7 +13,7 @@ using namespace East;
 static East::Logger::sptr g_logger = ELOG_ROOT();
 
 void test_sleep() {
-    //TODO
+  //TODO
   ELOG_INFO(g_logger) << "test sleep";
   IOManager io_mgr(1);
   io_mgr.schedule([]() {
@@ -29,7 +29,7 @@ void test_sleep() {
   });
 
   ELOG_INFO(g_logger) << "test sleep end";
-//   sleep(10);
+  //   sleep(10);
 }
 
 int main() {

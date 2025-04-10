@@ -183,7 +183,7 @@ void Scheduler::run() {
     }
     if (task.isValidTask())
       ELOG_INFO(g_logger) << "Hanlded task in queue, id: " << task.getTaskId()
-                           << ", task type: " << task.getTaskType();
+                          << ", task type: " << task.getTaskType();
     //如果协程的状态可以执行，则执行                          //TODO: 这里的状态判断有点问题, 如果是hold状态，现在不一定能执行，因为可能有定时器
     if (task.getTaskType() == ExecuteTask::FIBER &&
         (task.fiber->getState() != Fiber::TERM &&

@@ -5,14 +5,14 @@
  * @Last Modified time: 2025-04-07 14:31:15
  */
 
-#include <algorithm>
+#include "IOManager.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <unistd.h>
+#include <algorithm>
 #include <functional>
-#include "IOManager.h"
 #include "Elog.h"
 #include "Macro.h"
 
@@ -274,16 +274,16 @@ void IOManager::contextResize(size_t sz) {
 
   for (size_t i = 0; i < m_fdContexts.size(); ++i) {
     if (nullptr == m_fdContexts[i]) {
-      m_fdContexts[i] = new(std::nothrow) FdContext;
+      m_fdContexts[i] = new (std::nothrow) FdContext;
       m_fdContexts[i]->fd = i;
     }
   }
 }
 
 void IOManager::SafeContextResize(size_t sz) {
-  if(sz <= m_fdContexts.size()) {
+  if (sz <= m_fdContexts.size()) {
     m_fdContexts.resize(sz);
-    return ;
+    return;
   }
 
   //maybe reallocate
@@ -291,9 +291,9 @@ void IOManager::SafeContextResize(size_t sz) {
   tmp.resize(sz);
   copy(m_fdContexts.begin(), m_fdContexts.end(), tmp.begin());
   m_fdContexts.swap(tmp);
-  for(size_t i = 0; i<m_fdContexts.size(); ++i) {
-    if(nullptr == m_fdContexts[i]) {
-      m_fdContexts[i] = new(std::nothrow) FdContext;
+  for (size_t i = 0; i < m_fdContexts.size(); ++i) {
+    if (nullptr == m_fdContexts[i]) {
+      m_fdContexts[i] = new (std::nothrow) FdContext;
       m_fdContexts[i]->fd = i;
     }
   }
