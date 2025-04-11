@@ -63,8 +63,7 @@ FdManager::FdManager() {
 
 FdManager::~FdManager() {}
 
-FileDescriptor::sptr FdManager::getFd(int fd,
-                                      bool create_when_notfound) {
+FileDescriptor::sptr FdManager::getFd(int fd, bool create_when_notfound) {
   if (fd < 0)
     return nullptr;
   {
