@@ -87,6 +87,7 @@ ssize_t do_io(int fd, OriginalFunc func, const char* hook_func_name, uint32_t ev
   
   std::shared_ptr<timer_info> tinfo = std::make_shared<timer_info>();
 retry:
+  East::Timer::sptr timer{nullptr};
 
   ssize_t res = func(fd, std::forward<OriginalFuncParams>(params)...);
   while(res == -1 && errno == EINTR) { 
@@ -99,8 +100,48 @@ retry:
     
     auto io_mgr = East::IOManager::GetThis();
 
-    if(timeout != (uint64_t)-1)
-    auto Timer::sptr = io_mgr->addConditionTimer()
+    if(timeout != (uint64_t)-1) {
+      //如果设置了超时时间，我们就添加一个条件定时器，在超时后取消这个事件
+      std::weak_ptr<timer_info> weak_tinfo(tinfo);
+      timer = io_mgr->addConditionTimer(timeout, [io_mgr, weak_tinfo, fd, event]{
+        auto shared_tinfo = weak_tinfo.lock();
+        if(nullptr == shared_tinfo || shared_tinfo->cancelled) {
+          return ;
+        }
+        shared_tinfo->cancelled = ETIMEDOUT;
+        if(nullptr != io_mgr) {
+          io_mgr->cancelEvent(fd, static_cast<East::IOManager::Event>(event));
+        }
+      }, weak_tinfo);
+    }
+
+    //添加对应的事件到队列中去，然后让出执行权，恢复后做检查
+    int res = io_mgr->addEvent(fd, static_cast<East::IOManager::Event>(event));
+
+    if(res != 0) {
+      //添加事件失败，先取消timer，再返回错误
+      if(nullptr != timer) {
+        timer->cancel();
+      }
+      return -1;
+    }else{
+      //添加成功了， 先让出执行权
+      East::Fiber::YieldToHold();
+
+      //恢复后取消定时器，说明没有超时
+      if(nullptr != timer) {
+        timer->cancel();
+      }
+
+      //检查这次resume是否是上面的条件定时器触发的
+      if(tinfo->cancelled) {
+        errno = tinfo->cancelled;
+        return -1;
+      }
+
+      //否则重试
+      goto retry;   //TODO, why use goto
+    }
   }
   return res;
 }

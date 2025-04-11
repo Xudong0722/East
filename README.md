@@ -338,3 +338,29 @@ sleep()
 usleep()
 
 测试中发现我们的Fiber有一点问题，TODO
+
+和socket相关的函数普遍都与IO操作相关，我们封装了一个模板函数，他的主要流程如下：
+```cpp
+调用 do_io()
+    ↓
+执行真实系统调用 → 如果成功 → 返回
+    ↓
+errno = EAGAIN ?
+    ↓
+addEvent(fd, event)
+    ↓
+设置 timeout timer（可选）
+    ↓
+当前 fiber yield 掉
+    ↓
+等待 epoll 唤醒
+    ↓
+epoll 事件来了？
+     ↙               ↘
+  是，取消 timer     否，timer 超时触发
+     ↓               ↓
+   fiber resume      fiber resume
+     ↓               ↓
+   重试       errno = ETIMEDOUT, return -1
+
+```
