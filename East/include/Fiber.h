@@ -42,6 +42,7 @@ class Fiber
 
   State getState() const { return m_state; }
   void setState(State state) { m_state = state; }
+  uint64_t getId() const { return m_id; }
 
  public:
   //设置当前协程

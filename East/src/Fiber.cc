@@ -72,7 +72,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool run_in_scheduler)
 
   makecontext(&m_ctx, &Fiber::MainFunc, 0);
 
-  setState(INIT);
+  //setState(INIT);
   ELOG_INFO(g_logger) << "Fiber created, id: " << m_id
                       << ", thread id: " << GetThreadId()
                       << ", run in scheduler: " << m_run_in_scheduler;
@@ -124,8 +124,8 @@ void Fiber::reset(std::function<void()> cb) {
 }
 
 void Fiber::resume() {
-  EAST_ASSERT2(m_state != EXEC, m_state);
-  SetThis(this);  //该协程切换到当前协程
+  EAST_ASSERT2(m_state != EXEC, m_state);  //TODO
+  SetThis(this);                           //该协程切换到当前协程
   setState(EXEC);
 
   if (!m_run_in_scheduler) {
@@ -147,6 +147,10 @@ void Fiber::resume() {
 
 void Fiber::yield() {
   //EAST_ASSERT2(m_state == EXEC, m_state);
+  ELOG_DEBUG(ELOG_ROOT()) << "m_run_int_scheduler: " << m_run_in_scheduler
+                          << ", cur id: " << m_id << ", main fiber id: "
+                          << Scheduler::GetMainFiber()->getId()
+                          << ", master fiber id: " << t_master_fiber->getId();
   if (m_run_in_scheduler)
     SetThis(Scheduler::GetMainFiber());
   else
@@ -161,7 +165,6 @@ void Fiber::yield() {
       EAST_ASSERT2(false, "swapcontext: cur fiber to master fiber failed.");
     }
   } else {
-    //ELOG_INFO(ELOG_ROOT()) << "cur id: " << m_id << ", main fiber id: " << Scheduler::GetMainFiber()->m_id;
     if (swapcontext(
             &m_ctx,
             &Scheduler::GetMainFiber()->m_ctx)) {  //old context, new context

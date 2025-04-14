@@ -85,13 +85,13 @@ void Scheduler::start() {
 
 //停止调度器, 确保所有任务都处理完毕，同时要避免内存泄漏
 void Scheduler::stop() {
-  ELOG_INFO(g_logger) << "enter Scheduler::stop";
+  ELOG_DEBUG(g_logger) << "enter Scheduler::stop";
   m_autoStop = true;
 
   if (m_rootFiber != nullptr && m_threadCount == 0 &&
       (m_rootFiber->getState() == Fiber::TERM ||
        m_rootFiber->getState() == Fiber::INIT)) {
-    ELOG_INFO(g_logger) << this << " stopped.";
+    ELOG_DEBUG(g_logger) << this << " stopped.";
     m_stopping = true;
 
     if (stopping()) {
@@ -112,7 +112,7 @@ void Scheduler::stop() {
 
   if (m_rootFiber) {
     if (!stopping()) {
-      ELOG_INFO(g_logger)
+      ELOG_DEBUG(g_logger)
           << "Scheduler not stopping, root fiber will be called before stop";
       m_rootFiber
           ->resume();  //确保调度器stop之前会执行一次run方法，如果放在start里面的话，如果没有任务就空跑一次fiber了
@@ -131,7 +131,7 @@ void Scheduler::stop() {
 }
 
 void Scheduler::run() {
-  ELOG_INFO(g_logger) << "run";
+  ELOG_DEBUG(g_logger) << "run";
   SetThis(this);
   set_hook_enable(true);  //设置当前线程需要hook, 我们自己的scheduler需要hook
   if (East::GetThreadId() != m_rootThreadId) {
@@ -181,9 +181,15 @@ void Scheduler::run() {
     if (tickle_me) {
       tickle();
     }
-    if (task.isValidTask())
-      ELOG_INFO(g_logger) << "Hanlded task in queue, id: " << task.getTaskId()
-                          << ", task type: " << task.getTaskType();
+    if (task.isValidTask()) {
+      ELOG_DEBUG(g_logger) << "Hanlded task in queue, id: " << task.getTaskId()
+                           << ", task type: " << task.getTaskType()
+                           << ", task queue size: " << m_tasks.size();
+      if (task.getTaskType() == ExecuteTask::FIBER) {
+        ELOG_DEBUG(g_logger) << "fiber state: " << task.fiber->getState();
+      }
+    }
+
     //如果协程的状态可以执行，则执行                          //TODO: 这里的状态判断有点问题, 如果是hold状态，现在不一定能执行，因为可能有定时器
     if (task.getTaskType() == ExecuteTask::FIBER &&
         (task.fiber->getState() != Fiber::TERM &&
@@ -193,9 +199,9 @@ void Scheduler::run() {
 
       if (task.fiber->getState() ==
           Fiber::READY) {  //执行完之后如果协程还是ready状态，就放回到任务队列中
-        ELOG_INFO(g_logger) << "After resume, task fiber is on ready state, "
-                               "put back to queue. Task id: "
-                            << task.getTaskId();
+        ELOG_DEBUG(g_logger) << "After resume, task fiber is on ready state, "
+                                "put back to queue. Task id: "
+                             << task.getTaskId();
         schedule(task.fiber);
       } else if (task.fiber->getState() != Fiber::TERM &&
                  task.fiber->getState() != Fiber::EXCEPT) {
@@ -218,17 +224,19 @@ void Scheduler::run() {
                  cb_fiber->getState() == Fiber::TERM) {
         cb_fiber->reset(nullptr);
       } else {
-        cb_fiber->setState(Fiber::HOLD);  //meaningless?
+        cb_fiber->setState(
+            Fiber::
+                HOLD);  //bug trace: https://www.yuque.com/kuaiquxiedaima/ov0nhi/xvssyw7z02mgkd17#D5TXn
         cb_fiber.reset();
       }
     } else {
       if (is_active) {
-        --m_activeThreadCount;  //TODO:why thread count minus one?
+        --m_activeThreadCount;
         continue;
       }
 
       if (idle_fiber->getState() == Fiber::TERM) {
-        ELOG_INFO(g_logger) << "idle fiber term";
+        ELOG_DEBUG(g_logger) << "idle fiber term";
         break;
       }
 
@@ -237,7 +245,7 @@ void Scheduler::run() {
       --m_idleThreadCount;
       if (idle_fiber->getState() != Fiber::TERM &&
           idle_fiber->getState() != Fiber::EXCEPT) {
-        idle_fiber->setState(Fiber::HOLD);
+        idle_fiber->setState(Fiber::HOLD);  //TODO
       }
     }
   }
@@ -248,11 +256,11 @@ bool Scheduler::hasIdleThreads() {
 }
 
 void Scheduler::tickle() {
-  ELOG_INFO(g_logger) << "tickle";
+  ELOG_DEBUG(g_logger) << "tickle";
 }
 
 void Scheduler::idle() {
-  ELOG_INFO(g_logger) << "idle";
+  ELOG_DEBUG(g_logger) << "idle";
   while (!stopping()) {
     East::Fiber::YieldToHold();
   }

@@ -48,7 +48,7 @@ class Scheduler {
     ExecuteTask et(std::forward<Task>(task), thread_id);
     if (et.fiber || et.cb) {
       m_tasks.emplace_back(std::move(et));
-      ELOG_DEBUG(ELOG_NAME("system"))
+      ELOG_INFO(ELOG_NAME("system"))
           << "Add new task, type: " << typeid(decltype(task)).name()
           << ", task id: " << et.getTaskId() << ", thread id: " << thread_id;
     }

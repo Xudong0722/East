@@ -254,64 +254,61 @@ ConfigVar<std::set<LoggerConfigInfo>>::sptr g_log_config =
     Config::Lookup("logs", std::set<LoggerConfigInfo>{}, "log config");
 
 LogInitiator::LogInitiator() {
-  g_log_config->addListener(
-      LOG_INITIATOR_CALLBACK_ID, [](const std::set<LoggerConfigInfo>& old_v,
-                                    const std::set<LoggerConfigInfo>& new_v) {
-        ELOG_INFO(ELOG_ROOT())
-            << "on log config changed, old size: " << old_v.size()
-            << ", new size: " << new_v.size();
+  g_log_config->addListener([](const std::set<LoggerConfigInfo>& old_v,
+                               const std::set<LoggerConfigInfo>& new_v) {
+    ELOG_INFO(ELOG_ROOT()) << "on log config changed, old size: "
+                           << old_v.size() << ", new size: " << new_v.size();
 
-        //1.add 2.del 3.modify
-        for (const auto& item : new_v) {
-          auto it = old_v.find(item);
-          std::shared_ptr<Logger> logger{};
-          if (it == old_v.end()) {
-            //add event
-            logger = ELOG_NAME(item.name);
-          } else {
-            if (!(*it == item)) {
-              //modify event
-              logger = ELOG_NAME(item.name);
-            } else {
-              continue;
-            }
-          }
+    //1.add 2.del 3.modify
+    for (const auto& item : new_v) {
+      auto it = old_v.find(item);
+      std::shared_ptr<Logger> logger{};
+      if (it == old_v.end()) {
+        //add event
+        logger = ELOG_NAME(item.name);
+      } else {
+        if (!(*it == item)) {
+          //modify event
+          logger = ELOG_NAME(item.name);
+        } else {
+          continue;
+        }
+      }
 
-          logger->setLevel(item.level);
-          if (!item.formatter.empty())
-            logger->setFormatter(item.formatter);
+      logger->setLevel(item.level);
+      if (!item.formatter.empty())
+        logger->setFormatter(item.formatter);
 
-          logger->clearAppenders();
-          for (const auto& ap : item.log_appenders) {
-            std::shared_ptr<LogAppender> log_appender{};
-            if (ap.type == LogAppenderType::FILE) {
-              log_appender.reset(new FileLogAppender(ap.file_path));
-            } else if (ap.type == LogAppenderType::STANDARD) {
-              log_appender.reset(new StdoutLogAppender());
-            }
-
-            log_appender->setLevel(ap.level);
-            if (!ap.formatter.empty()) {
-              std::shared_ptr<LogFormatter> appender_formatter =
-                  std::make_shared<LogFormatter>(ap.formatter);
-              if (nullptr != appender_formatter &&
-                  !appender_formatter->hasError())
-                log_appender->setFormatter(appender_formatter);
-            }
-            logger->addAppender(log_appender);
-          }
+      logger->clearAppenders();
+      for (const auto& ap : item.log_appenders) {
+        std::shared_ptr<LogAppender> log_appender{};
+        if (ap.type == LogAppenderType::FILE) {
+          log_appender.reset(new FileLogAppender(ap.file_path));
+        } else if (ap.type == LogAppenderType::STANDARD) {
+          log_appender.reset(new StdoutLogAppender());
         }
 
-        for (const auto& item : old_v) {
-          auto it = new_v.find(item);
-          if (it == new_v.end())  // delete event
-          {
-            auto logger = ELOG_NAME(item.name);
-            logger->clearAppenders();
-            logger->setLevel(LogLevel::Level::NONE);
-          }
+        log_appender->setLevel(ap.level);
+        if (!ap.formatter.empty()) {
+          std::shared_ptr<LogFormatter> appender_formatter =
+              std::make_shared<LogFormatter>(ap.formatter);
+          if (nullptr != appender_formatter && !appender_formatter->hasError())
+            log_appender->setFormatter(appender_formatter);
         }
-      });
+        logger->addAppender(log_appender);
+      }
+    }
+
+    for (const auto& item : old_v) {
+      auto it = new_v.find(item);
+      if (it == new_v.end())  // delete event
+      {
+        auto logger = ELOG_NAME(item.name);
+        logger->clearAppenders();
+        logger->setLevel(LogLevel::Level::NONE);
+      }
+    }
+  });
 }
 
 static LogInitiator g_log_initiator;  // init before exe main func

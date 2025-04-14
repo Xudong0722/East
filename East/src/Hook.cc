@@ -5,8 +5,9 @@
  * @Last Modified time: 2025-04-10 21:01:19
  */
 
- #include <dlfcn.h>
-#include "Hook.h" 
+#include "Hook.h"
+#include <dlfcn.h>
+#include "Config.h"
 #include "FdManager.h"
 #include "Fiber.h"
 #include "IOManager.h"
@@ -14,6 +15,9 @@
 namespace East {
 static thread_local bool t_hook_enable = false;
 static East::Logger::sptr g_logger = ELOG_NAME("system");
+
+static East::ConfigVar<int>::sptr g_tcp_connect_timeout =
+    East::Config::Lookup("tcp.connect.timeout", 5000, "tcp connect timeout");
 
 //宏定义：要hook的所有函数
 #define HOOK_FUNC(func)                                                  \
@@ -36,8 +40,18 @@ void hook_init() {
 #undef hook
 }
 
+static uint64_t s_connect_timeout = -1;
 struct _HookIniter {
-  _HookIniter() { hook_init(); }
+  _HookIniter() {
+    hook_init();
+    s_connect_timeout = g_tcp_connect_timeout->getValue();
+    g_tcp_connect_timeout->addListener(
+        [](const auto& old_v, const auto& new_v) {
+          ELOG_INFO(g_logger) << "tcp connect timeout changed from " << old_v
+                              << " to " << new_v;
+          s_connect_timeout = new_v;
+        });
+  }
 };
 
 static _HookIniter s_hook_initer;  //main函数之前初始化，
@@ -125,7 +139,8 @@ retry:
 
     if (res != 0) {
 
-      ELOG_ERROR(g_logger) << hook_func_name << " addEvent(" << fd << ", " << event <<")";
+      ELOG_ERROR(g_logger) << hook_func_name << " addEvent(" << fd << ", "
+                           << event << ")";
       //添加事件失败，先取消timer，再返回错误
       if (nullptr != timer) {
         timer->cancel();
@@ -168,12 +183,11 @@ unsigned int sleep(unsigned int seconds) {
   auto fiber = East::Fiber::GetThis();
   auto io_mgr = East::IOManager::GetThis();
 
-    // auto func = std::bind(
+  // auto func = std::bind(
   //   (void (East::IOManager::*)(East::Fiber::sptr, int thread_id))(&East::IOManager::schedule),
   //   io_mgr, fiber, -1);
 
   if (nullptr != fiber && nullptr != io_mgr) {
-    //ELOG_INFO(ELOG_ROOT()) << "enter sleep, seconds: " << seconds;
     io_mgr->addTimer(seconds * 1000, [io_mgr, fiber]() {
       if (nullptr != io_mgr) {
         io_mgr->schedule(fiber);
@@ -238,30 +252,95 @@ int socket(int domain, int type, int protocol) {
 }
 
 int connect_with_timeout(int fd, const struct sockaddr* addr, socklen_t addrlen,
-                          uint64_t timeout) {
+                         uint64_t timeout) {
+  ELOG_DEBUG(East::g_logger)
+      << "connect_with_timeout fd: " << fd << ", timeout: " << timeout
+      << ", is current thread hook: " << East::is_hook_enable();
   if (!East::is_hook_enable()) {
     return connect_f(fd, addr, addrlen);
   }
 
   auto fd_status = East::FdMgr::GetInst()->getFd(fd);
-  if(nullptr == fd_status || fd_status->isClosed()) {
+  if (nullptr == fd_status || fd_status->isClosed()) {
     errno = EBADF;
     return -1;
   }
 
-  if(!fd_status->isSocket() || fd_status->isUserNonBlock()) {
+  if (!fd_status->isSocket() || fd_status->isUserNonBlock()) {
     return connect_f(fd, addr, addrlen);
   }
 
   int res = connect_f(fd, addr, addrlen);
-  if(!res) return res;
-  else if(res != -1 || errno != EINPROGRESS) {
+  ELOG_DEBUG(East::g_logger)
+      << "connect_f fd: " << fd << ", res: " << res << ", errno: " << errno;
+  if (!res)
+    return res;
+  else if (res != -1 || errno != EINPROGRESS) {
     return res;
   }
 
-  
+  auto io_mgr = East::IOManager::GetThis();
+  East::Timer::sptr timer{nullptr};
+  std::shared_ptr<East::timer_info> tinfo =
+      std::make_shared<East::timer_info>();
+  std::weak_ptr<East::timer_info> weak_tinfo(tinfo);
+
+  if (timeout != static_cast<uint64_t>(-1)) {
+    timer = io_mgr->addConditionTimer(
+        timeout,
+        [io_mgr, weak_tinfo, fd] {
+          auto shared_tinfo = weak_tinfo.lock();
+          if (nullptr == shared_tinfo || shared_tinfo->cancelled) {
+            return;
+          }
+          shared_tinfo->cancelled = ETIMEDOUT;
+          if (nullptr != io_mgr) {
+            io_mgr->cancelEvent(fd, East::IOManager::WRITE);
+          }
+        },
+        weak_tinfo);
+  }
+
+  int ret = io_mgr->addEvent(fd, East::IOManager::WRITE);
+
+  if (ret != 0) {
+    ELOG_ERROR(East::g_logger) << "connect_with_timeout addEvent(" << fd << ", "
+                               << East::IOManager::WRITE << ")";
+    if (nullptr != timer) {
+      timer->cancel();
+    }
+    return -1;
+  } else {
+    East::Fiber::GetThis()->yield();
+    if (nullptr != timer) {
+      timer->cancel();
+    }
+    if (tinfo->cancelled) {
+      errno = tinfo->cancelled;
+      return -1;
+    }
+  }
+
+  int error{0};
+  socklen_t len = sizeof(int);
+  if (-1 == getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len)) {
+    return -1;
+  }
+
+  ELOG_DEBUG(East::g_logger)
+      << "connect_with_timeout getsockopt fd: " << fd << ", error: " << error;
+
+  if (error) {
+    errno = error;
+    return -1;
+  }
+  return 0;
 }
-int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {}
+
+int connect(int sockfd, const struct sockaddr* addr, socklen_t addrlen) {
+  return connect_with_timeout(sockfd, addr, addrlen,
+                              East::g_tcp_connect_timeout->getValue());
+}
 
 int accept(int sockfd, struct sockaddr* addr, socklen_t* addrlen) {
   int fd = do_io(sockfd, accept_f, "accept", East::IOManager::READ, SO_RCVTIMEO,
@@ -345,25 +424,24 @@ int close(int fd) {
 
 //socket operations
 int fcntl(int fd, int cmd, ... /* arg */) {
-  if(!East::is_hook_enable()) {
-    return fcntl_f(fd, cmd);
-  }
+
   va_list ap;
   va_start(ap, cmd);
-  switch(cmd) {
-    case F_SETFL : {
+  switch (cmd) {
+    case F_SETFL: {
       int arg = va_arg(ap, int);
       va_end(ap);
       //因为就算用户没有设置为nonblock(user)，但是我们下面是会使用nonblock(system)的，所以我们这里要调整下入参
       auto fd_status = East::FdMgr::GetInst()->getFd(fd);
-      if(nullptr == fd_status || fd_status->isClosed() || !fd_status->isSocket()) {
+      if (nullptr == fd_status || fd_status->isClosed() ||
+          !fd_status->isSocket()) {
         return fcntl_f(fd, cmd, arg);
       }
 
       fd_status->setUserNonBlock(arg & O_NONBLOCK);
-      if(fd_status->isSysNonBlock()) {
+      if (fd_status->isSysNonBlock()) {
         arg |= O_NONBLOCK;
-      }else{
+      } else {
         arg &= ~O_NONBLOCK;
       }
       return fcntl_f(fd, cmd, arg);
@@ -372,12 +450,13 @@ int fcntl(int fd, int cmd, ... /* arg */) {
       va_end(ap);
       int arg = fcntl_f(fd, cmd);
       auto fd_status = East::FdMgr::GetInst()->getFd(fd);
-      if(nullptr == fd_status || fd_status->isClosed() || !fd_status->isSocket()) {
+      if (nullptr == fd_status || fd_status->isClosed() ||
+          !fd_status->isSocket()) {
         return arg;
       }
-      if(fd_status->isUserNonBlock()) {
+      if (fd_status->isUserNonBlock()) {
         arg |= O_NONBLOCK;
-      }else {
+      } else {
         arg &= ~O_NONBLOCK;
       }
       return arg;
@@ -420,7 +499,7 @@ int fcntl(int fd, int cmd, ... /* arg */) {
       return fcntl_f(fd, cmd);
     }
   }
-  
+
   return fcntl_f(fd, cmd);
 }
 
@@ -432,10 +511,11 @@ int ioctl(int fd, unsigned long request, ...) {
   void* arg = va_arg(ap, void*);
   va_end(ap);
 
-  if(FIONBIO == request) {  //也用于设置fd的非阻塞模式
+  if (FIONBIO == request) {  //也用于设置fd的非阻塞模式
     bool user_nonblock = !!(*static_cast<int*>(arg));
     auto fd_status = East::FdMgr::GetInst()->getFd(fd);
-    if(nullptr == fd_status || fd_status->isClosed() || !fd_status->isSocket()) {
+    if (nullptr == fd_status || fd_status->isClosed() ||
+        !fd_status->isSocket()) {
       return ioctl_f(fd, request, arg);
     }
     fd_status->setUserNonBlock(user_nonblock);
@@ -454,20 +534,19 @@ int setsockopt(int sockfd, int level, int optname, const void* optval,
     return setsockopt_f(sockfd, level, optname, optval, optlen);
   }
 
-  if(level == SOL_SOCKET) {
-    if(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO) {
+  if (level == SOL_SOCKET) {
+    if (optname == SO_RCVTIMEO || optname == SO_SNDTIMEO) {
       auto fd_status = East::FdMgr::GetInst()->getFd(sockfd);
-      if(nullptr != fd_status) {
+      if (nullptr != fd_status) {
         const timeval* t = static_cast<const timeval*>(optval);
-        if(nullptr != t) {
-          if(optname == SO_RCVTIMEO) {
+        if (nullptr != t) {
+          if (optname == SO_RCVTIMEO) {
             fd_status->setRecvTimeout(t->tv_sec * 1000 + t->tv_usec / 1000);
-          } else if(optname == SO_SNDTIMEO) {
+          } else if (optname == SO_SNDTIMEO) {
             fd_status->setSendTimeout(t->tv_sec * 1000 + t->tv_usec / 1000);
           }
         }
       }
-
     }
   }
   return setsockopt_f(sockfd, level, optname, optval, optlen);

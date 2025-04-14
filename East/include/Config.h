@@ -20,9 +20,6 @@
 #include "Elog.h"
 #include "util.h"
 
-//Listener ID
-#define LOG_INITIATOR_CALLBACK_ID 0x1LL
-
 namespace East {
 /*
      * Config Item base class
@@ -254,6 +251,7 @@ class ConfigVar : public ConfigVarBase {
  public:
   using sptr = std::shared_ptr<ConfigVar>;
   using listener = std::function<void(const T& old_v, const T& new_v)>;
+  using RWMutexType = RWLock;
   ConfigVar(const std::string& name, const T& val,
             const std::string& description = "")
       : ConfigVarBase(name, description), m_val(val) {}
@@ -294,16 +292,31 @@ class ConfigVar : public ConfigVarBase {
     m_val = t;
   }
 
-  void addListener(uint64_t key, listener cb) { m_cbs[key] = cb; }
+  uint64_t addListener(listener cb) {
+    static int s_listener_id = 0;
+    RWLock::WLockGuard wlock(m_mutex);
+    m_cbs[++s_listener_id] = cb;
+    return s_listener_id;
+  }
 
-  void delListener(uint64_t key) { m_cbs.erase(key); }
+  void delListener(uint64_t key) {
+    RWLock::WLockGuard wlock(m_mutex);
+    m_cbs.erase(key);
+  }
 
-  listener getListener(uint64_t key) { return m_cbs[key]; }
+  listener getListener(uint64_t key) {
+    RWLock::RLockGuard rlock(m_mutex);
+    return m_cbs[key];
+  }
 
-  void clearAllListeners() { m_cbs.clear(); }
+  void clearAllListeners() {
+    RWLock::WLockGuard wlock(m_mutex);
+    m_cbs.clear();
+  }
 
  private:
   T m_val;
+  RWMutexType m_mutex;
   //std::function not support operator==, we can ues map to store all the callbacks
   std::map<uint64_t, listener> m_cbs;
 };

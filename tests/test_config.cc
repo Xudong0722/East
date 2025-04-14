@@ -156,7 +156,7 @@ void test_config() {
                          << g_person_value_config->getValue().toString()
                          << " - " << g_person_value_config->toString();
   g_person_value_config->addListener(
-      101, [](const Person& old_person, const Person& new_person) {
+      [](const Person& old_person, const Person& new_person) {
         ELOG_INFO(ELOG_ROOT()) << "Old value: " << old_person.toString()
                                << ", new value: " << new_person.toString();
       });

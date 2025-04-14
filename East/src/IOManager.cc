@@ -42,6 +42,8 @@ void IOManager::FdContext::resetContext(
 void IOManager::FdContext::triggerEvent(IOManager::Event event) {
   EAST_ASSERT(events & event);
 
+  events =
+      (Event)(events & ~event);  //这个事件触发了就删除掉，我们也就不再关心了
   EventContext& event_ctx = getContext(event);
   if (event_ctx.cb) {
     event_ctx.scheduler->schedule(&event_ctx.cb);
@@ -100,7 +102,9 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     SafeContextResize(fd * 1.5);
     fd_ctx = m_fdContexts[fd];
   }
-  //ELOG_INFO(g_logger) << "epfd: " << m_epfd << ", fd: " << fd <<", event: " << event <<", fd event: " << fd_ctx->events;
+  ELOG_DEBUG(g_logger) << "epfd: " << m_epfd << ", fd: " << fd
+                       << ", event: " << event
+                       << ", fd event: " << fd_ctx->events;
   FdContext::MutextType::LockGuard lock2(fd_ctx->mutex);
   if (fd_ctx->events & event) {  //如果该fd已经添加过此类型时间的话
     ELOG_ERROR(g_logger) << "Assert- addEvent, fd: " << fd
@@ -137,7 +141,9 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
   } else {
     event_ctx.fiber = Fiber::GetThis();  //TODO
   }
-  //ELOG_INFO(g_logger) << __FUNCTION__ << "epfd: " << m_epfd << ", fd: " << fd <<", event: " << event <<", fd event: " << fd_ctx->events;
+  ELOG_DEBUG(g_logger) << __FUNCTION__ << "epfd: " << m_epfd << ", fd: " << fd
+                       << ", event: " << event
+                       << ", fd event: " << fd_ctx->events;
   return 0;
 }
 
@@ -153,8 +159,8 @@ bool IOManager::removeEvent(int fd, Event event) {
 
   FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
   if ((fd_ctx->events & event) == 0) {
-    ELOG_INFO(g_logger) << "This fd " << fd << " doesn't have this event "
-                        << event;
+    ELOG_DEBUG(g_logger) << "This fd " << fd << " doesn't have this event "
+                         << event;
     return false;
   }
 
@@ -191,11 +197,13 @@ bool IOManager::cancelEvent(int fd, Event event) {
     RWMutexType::RLockGuard lock(m_mutex);
     fd_ctx = m_fdContexts[fd];
   }
-  //ELOG_INFO(g_logger) << "epfd: " << m_epfd << ", fd: " << fd <<", event: " << event <<", fd event: " << fd_ctx->events;
+  ELOG_DEBUG(g_logger) << "epfd: " << m_epfd << ", fd: " << fd
+                       << ", event: " << event
+                       << ", fd event: " << fd_ctx->events;
   FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
   if ((fd_ctx->events & event) == 0) {
-    ELOG_INFO(g_logger) << "This fd " << fd << " doesn't have this event "
-                        << event;
+    ELOG_DEBUG(g_logger) << "This fd " << fd << " doesn't have this event "
+                         << event;
     return false;
   }
 
@@ -236,7 +244,7 @@ bool IOManager::cancelAll(int fd) {
 
   FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
   if (fd_ctx->events == 0) {
-    ELOG_INFO(g_logger) << "This fd " << fd << " doesn't have event ";
+    ELOG_DEBUG(g_logger) << "This fd " << fd << " doesn't have event ";
     return false;
   }
 
@@ -317,7 +325,7 @@ void IOManager::tickle() {
 }
 
 void IOManager::idle() {
-  ELOG_INFO(g_logger) << "idle";
+  ELOG_DEBUG(g_logger) << "idle";
   constexpr uint32_t MAX_EVENTS = 256;
   std::unique_ptr<epoll_event[]> ep_events(new epoll_event[MAX_EVENTS]);
 
@@ -325,7 +333,7 @@ void IOManager::idle() {
     uint64_t next_timeout{0};
     if (stopping(next_timeout)) {
 
-      ELOG_INFO(g_logger) << "IOManager stopping";
+      ELOG_DEBUG(g_logger) << "IOManager stopping";
       break;
     }
 
@@ -338,7 +346,7 @@ void IOManager::idle() {
       else
         next_timeout = MAX_EVENTS;
 
-      //ELOG_INFO(g_logger) << "epoll wait, timeout: " << next_timeout;
+      ELOG_DEBUG(g_logger) << "epoll wait, timeout: " << next_timeout;
       res = epoll_wait(m_epfd, ep_events.get(), MAX_EVENTS, (int)next_timeout);
 
       if (res < 0 && errno == EINTR) {
@@ -350,14 +358,13 @@ void IOManager::idle() {
 
     std::vector<std::function<void()>> timer_cbs{};
     listExpiredCb(timer_cbs);
-    //ELOG_INFO(g_logger) << "expired timer count: " << timer_cbs.size();
     if (!timer_cbs.empty()) {
       schedule(timer_cbs.begin(),
                timer_cbs.end());  //将符合条件的timer的回调放进去
       timer_cbs.clear();
     }
 
-    //ELOG_DEBUG(g_logger) << "idle: epoll wait, res: " << res;
+    ELOG_DEBUG(g_logger) << "idle: epoll wait, res: " << res;
     for (int i = 0; i < res; ++i) {
       epoll_event& event = ep_events[i];
       if (event.data.fd == m_tickleFds[0]) {
@@ -369,6 +376,7 @@ void IOManager::idle() {
 
       FdContext* fd_ctx = static_cast<FdContext*>(event.data.ptr);
       FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
+      ELOG_DEBUG(g_logger) << "epoll wait, event:" << event.events;
       if (event.events & (EPOLLERR | EPOLLHUP)) {
         event.events |= EPOLLIN | EPOLLOUT;
       }
@@ -383,12 +391,14 @@ void IOManager::idle() {
       int left_events =
           (~real_events) & fd_ctx->events;  //这次没有触发的事件之后继续触发
       int op = left_events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
-      event.events = left_events;
-      //   ELOG_DEBUG(g_logger) << __FUNCTION__ << ", fd: " << event.data.fd
-      //     << ", fd ctx's fd: " << fd_ctx->fd
-      //     << ", fd ctx's events: " << fd_ctx->events
-      //     << ", event: " << event.events
-      //     << ", left_events: " << left_events << ", op: " << op;
+
+      ELOG_DEBUG(g_logger) << __FUNCTION__ << ", fd: " << event.data.fd
+                           << ", fd ctx's fd: " << fd_ctx->fd
+                           << ", fd ctx's events: " << fd_ctx->events
+                           << ", event: " << event.events
+                           << ", left_events: " << left_events << ", op: " << op
+                           << ", real_events: " << real_events;
+      event.events = left_events | EPOLLET;
       int res2 = epoll_ctl(m_epfd, op, fd_ctx->fd, &event);
       if (res2 != 0) {
         ELOG_ERROR(g_logger)
@@ -410,6 +420,8 @@ void IOManager::idle() {
     auto cur_fiber = Fiber::GetThis();
     auto raw_ptr = cur_fiber.get();
     cur_fiber.reset();
+    ELOG_DEBUG(g_logger) << "ready to yield, cur fiber id: " << raw_ptr->getId()
+                         << ", cur fiber state: " << raw_ptr->getState();
     raw_ptr->yield();
   }
 }
