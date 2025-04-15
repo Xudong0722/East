@@ -68,26 +68,65 @@ std::ostream& IPV4Address::dump(std::ostream& os) const {
     return os; 
 }
 
-IPAddress::sptr IPV4Address::getBroadcastAddr() const {}
+IPAddress::sptr IPV4Address::getBroadcastAddr() const {
+
+}
 
 IPAddress::sptr IPV4Address::getNetworkAddr() const {}
 
 IPAddress::sptr IPV4Address::getSubnetMask() const {}
 
-uint32_t IPV4Address::getPort() const {}
+uint32_t IPV4Address::getPort() const {
+  return byteswapOnLittleEndian(m_addr.sin_port);
+}
 
-void IPV4Address::setPort(uint32_t port) {}
+void IPV4Address::setPort(uint32_t port) {
+  m_addr.sin_port = byteswapOnLittleEndian(port);
+}
 
 //IPV6
+IPV6Address::IPV6Address(){
+  memset(&m_addr, 0, sizeof(m_addr));
+}
 
-IPV6Address::IPV6Address(uint32_t address, uint16_t port) {}
+IPV6Address::IPV6Address(const char* address, uint16_t port) {
+  memset(&m_addr, 0, sizeof(m_addr));
+  m_addr.sin6_family = AF_INET6;
+  m_addr.sin6_port = byteswapOnLittleEndian(port);   //转成大端字节序
+  memcpy(&m_addr.sin6_addr.s6_addr, address, 16);
+}
 
-const sockaddr* IPV6Address::getAddr() const {}
+const sockaddr* IPV6Address::getAddr() const {
+  return (sockaddr*)&m_addr;
+}
 
-socklen_t IPV6Address::getAddrLen() const {}
+socklen_t IPV6Address::getAddrLen() const {
+  return sizeof(m_addr);
+}
 
 std::ostream& IPV6Address::dump(std::ostream& os) const {
-    return os;
+  os << "[";
+  uint16_t* addr = (uint16_t*)&m_addr.sin6_addr.s6_addr;  //uint8_t[16] -> 8个uint16_t
+  bool used_zeros{false};
+  for(int i = 0; i<8; ++i) {
+    if(addr[i] == 0 && !used_zeros) {
+      continue;
+    }
+    if(i && addr[i-1] == 0 && !used_zeros) {
+      os << ":";
+      used_zeros = true;
+    }
+    if(i) {
+      os << ":";
+    }
+    os << std::hex << (int)byteswapOnLittleEndian(addr[i]) << std::dec;
+  }
+
+  if(!used_zeros && addr[7] == 0) {
+    os << "::";
+  }
+  os << "]:" << byteswapOnLittleEndian(m_addr.sin6_port);
+  return os;
 }
 
 IPAddress::sptr IPV6Address::getBroadcastAddr() const {}
@@ -96,29 +135,75 @@ IPAddress::sptr IPV6Address::getNetworkAddr() const {}
 
 IPAddress::sptr IPV6Address::getSubnetMask() const {}
 
-uint32_t IPV6Address::getPort() const {}
+uint32_t IPV6Address::getPort() const {
+  return byteswapOnLittleEndian(m_addr.sin6_port);
+}
 
-void IPV6Address::setPort(uint32_t port) {}
+void IPV6Address::setPort(uint32_t port) {
+  m_addr.sin6_port = byteswapOnLittleEndian(port);
+}
 
 //UnixAddress
-UnixAddress::UnixAddress(const std::string& path) {}
+
+static constexpr size_t MAX_PATH_LEN = sizeof(((sockaddr_un*)0)->sun_path) - 1; //不会解引用，sizeof在编译器计算
+
+UnixAddress::UnixAddress() {
+  memset(&m_addr, 0, sizeof(m_addr));
+  m_addr.sun_family = AF_UNIX;
+  m_length = offsetof(sockaddr_un, sun_path) + MAX_PATH_LEN;
+}
+UnixAddress::UnixAddress(const std::string& path) {
+  memset(&m_addr, 0, sizeof(m_addr));
+  m_addr.sun_family = AF_UNIX;
+  m_length = path.size() + 1;  //std::string does not include '\0'
+  if(path.empty() || path[0] == '\0') {
+    --m_length;
+  }
+
+  if(m_length > sizeof(m_addr.sun_path)) {
+    throw std::runtime_error("path too long");
+  }
+  memcpy(m_addr.sun_path, path.c_str(), m_length);
+  m_length += offsetof(sockaddr_un, sun_path);
+}
 
 //Address
-const sockaddr* UnixAddress::getAddr() const {}
+const sockaddr* UnixAddress::getAddr() const {
+  return (sockaddr*)&m_addr;
+}
 
-socklen_t UnixAddress::getAddrLen() const {}
+socklen_t UnixAddress::getAddrLen() const {
+  return m_length;
+}
 
 std::ostream& UnixAddress::dump(std::ostream& os) const {
-    return os;
+  if(m_length > offsetof(sockaddr_un, sun_path) && m_addr.sun_path[0] == '\0') {
+    //abstract socket, start with '\0'
+    return os << "\\0" << std::string(m_addr.sun_path + 1, m_length - offsetof(sockaddr_un, sun_path) - 1);
+  }
+  return os << m_addr.sun_path;
 }
 
 //UnknownAddress
+UnknownAddress::UnknownAddress(int family) {
+  memset(&m_addr, 0, sizeof(m_addr));
+  m_addr.sa_family = family;
+}
 
-const sockaddr* UnknownAddress::getAddr() const {}
+UnknownAddress::UnknownAddress(const sockaddr& addr) {
+  m_addr = addr;
+}
 
-socklen_t UnknownAddress::getAddrLen() const {}
+const sockaddr* UnknownAddress::getAddr() const {
+  return &m_addr;
+}
+
+socklen_t UnknownAddress::getAddrLen() const {
+  return sizeof(m_addr);
+}
 
 std::ostream& UnknownAddress::dump(std::ostream& os) const {
-    return os;
+  os << "[UnknownAddress: family=" << m_addr.sa_family << "]";
+  return os;
 }
 }  // namespace East
