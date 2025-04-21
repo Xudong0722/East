@@ -53,6 +53,7 @@ class IPV4Address : public IPAddress {
   IPV4Address(const sockaddr_in& addr);
   IPV4Address(uint32_t address = INADDR_ANY, uint16_t port = 0);
 
+  static sptr Create(const char* address = nullptr, uint32_t port = 0);
   //Address
   const sockaddr* getAddr() const override;
   socklen_t getAddrLen() const override;
@@ -74,8 +75,10 @@ class IPV6Address : public IPAddress {
   using sptr = std::shared_ptr<IPV6Address>;
 
   IPV6Address();
+  IPV6Address(const sockaddr_in6& address);
   IPV6Address(const char* address, uint16_t port = 0);
 
+  static sptr Create(const char* address = nullptr, uint32_t port = 0);
   //Address
   const sockaddr* getAddr() const override;
   socklen_t getAddrLen() const override;
