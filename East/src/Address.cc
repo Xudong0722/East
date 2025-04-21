@@ -11,6 +11,11 @@
 
 namespace East {
 
+template<class T>
+static T CreateMask(uint32_t bits) {
+  return (1 << (sizeof(T) * 8) - bits)- 1;  //TODO
+}
+
 int Address::getFamily() const {
   return getAddr()->sa_family;
 }
@@ -44,6 +49,10 @@ bool Address::operator!=(const Address& rhs) const {
 }
 
 //IPV4
+IPV4Address::IPV4Address(const sockaddr_in& addr) {
+  m_addr = addr;
+}
+
 IPV4Address::IPV4Address(uint32_t address, uint16_t port) {
   memset(&m_addr, 0, sizeof(m_addr));
   m_addr.sin_family = AF_INET;
@@ -68,13 +77,32 @@ std::ostream& IPV4Address::dump(std::ostream& os) const {
     return os; 
 }
 
-IPAddress::sptr IPV4Address::getBroadcastAddr() const {
-
+//	192.168.1.255， 这是一个广播地址，发送给192.168.1.0这个子网上的所有主机
+IPAddress::sptr IPV4Address::getBroadcastAddr(uint32_t prefix_len) const {
+  //发送给某个某段上所有的主机
+  if(prefix_len > 32) {
+    return nullptr;
+  }
+  sockaddr_in broadcast_addr(m_addr);
+  broadcast_addr.sin_addr.s_addr |= byteswapOnLittleEndian(
+      CreateMask<uint32_t>(prefix_len));  //广播地址 = 网络地址 | 掩码
+  return std::make_shared<IPV4Address>(broadcast_addr);
 }
 
-IPAddress::sptr IPV4Address::getNetworkAddr() const {}
+//	192.168.1.0这就是一个子网地址，对应的广播地址是192.168.1.255
+IPAddress::sptr IPV4Address::getNetworkAddr(uint32_t prefix_len) const {
+  if(prefix_len > 32){
+    return nullptr;
+  }
+  sockaddr_in network_addr(m_addr);
+  network_addr.sin_addr.s_addr &= byteswapOnLittleEndian(
+    ~CreateMask<uint32_t>(prefix_len));
+  return std::make_shared<IPV4Address>(network_addr);
+}
 
-IPAddress::sptr IPV4Address::getSubnetMask() const {}
+IPAddress::sptr IPV4Address::getSubnetMask(uint32_t prefix_len) const {
+  sockaddr_in 
+}
 
 uint32_t IPV4Address::getPort() const {
   return byteswapOnLittleEndian(m_addr.sin_port);
@@ -129,11 +157,11 @@ std::ostream& IPV6Address::dump(std::ostream& os) const {
   return os;
 }
 
-IPAddress::sptr IPV6Address::getBroadcastAddr() const {}
+IPAddress::sptr IPV6Address::getBroadcastAddr(uint32_t prefix_len) const {}
 
-IPAddress::sptr IPV6Address::getNetworkAddr() const {}
+IPAddress::sptr IPV6Address::getNetworkAddr(uint32_t prefix_len) const {}
 
-IPAddress::sptr IPV6Address::getSubnetMask() const {}
+IPAddress::sptr IPV6Address::getSubnetMask(uint32_t prefix_len) const {}
 
 uint32_t IPV6Address::getPort() const {
   return byteswapOnLittleEndian(m_addr.sin6_port);
