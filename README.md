@@ -364,3 +364,20 @@ epoll 事件来了？
    重试       errno = ETIMEDOUT, return -1
 
 ```
+
+## Address
+
+1.通过抽象和封装了ipv4，ipv6，unix address等相关类型，提高了API的统一性。
+2.适配小端机器，网络传输默认大端。
+3.几个便捷的API：
+- Lookup 根据域名及服务映射出所有的IP地址
+- LookupAny 找到任意一个满足条件的地址
+- LookupAnyIPAddress 找到任意一个满足条件的IP地址
+- GetInterfaceAddresses 获取当前机器的网卡地址
+4.Address类中抽象除了获取广播地址/网络地址/子网掩码/端口的方法
+
+
+几个关键系统api：
+getaddrinfo
+getifaddrs
+inet_pton
