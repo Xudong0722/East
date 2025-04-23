@@ -15,7 +15,7 @@
 
 namespace East {
 
-Logger::sptr g_logger = ELOG_NAME("system");
+static Logger::sptr g_logger = ELOG_NAME("system");
 
 // int32_t getThreadId(){
 // #if defined(__linux__) || defined(__unix__)

@@ -10,9 +10,11 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <map>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace East {
 class Address {
@@ -20,6 +22,24 @@ class Address {
   using sptr = std::shared_ptr<Address>;
   Address() = default;
   virtual ~Address() = default;
+
+  static sptr Create(const sockaddr* addr, socklen_t addrlen);
+
+  static bool Lookup(std::vector<Address::sptr>& result,
+                     const std::string& host, int family = AF_UNSPEC,
+                     int type = SOCK_STREAM, int protocol = 0);
+  static sptr LookupAny(const std::string& host, int family = AF_UNSPEC,
+                        int type = SOCK_STREAM, int protocol = 0);
+  static sptr LookupAnyIPAddress(const std::string& host,
+                                 int family = AF_UNSPEC, int type = SOCK_STREAM,
+                                 int protocol = 0);
+
+  static bool GetInterfaceAddresses(
+      std::multimap<std::string, std::pair<Address::sptr, uint32_t>>& result,
+      int family);
+  static bool GetInterfaceAddresses(
+      std::vector<std::pair<Address::sptr, uint32_t>>& result,
+      const std::string& iface, int family);
 
   int getFamily() const;
 

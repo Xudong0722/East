@@ -6,7 +6,11 @@
  */
 
 #include "Address.h"
+#include <ifaddrs.h>
+#include <netdb.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include "Elog.h"
 #include "Endian.h"
 
@@ -17,6 +21,197 @@ East::Logger::sptr g_logger = ELOG_NAME("system");
 template <class T>
 static T CreateMask(uint32_t bits) {
   return (1 << (sizeof(T) * 8 - bits)) - 1;  //TODO
+}
+
+template <class T>
+static uint32_t CountBitIsOne(T val) {
+  uint32_t cnt{0};
+  while (val) {
+    ++cnt;
+    val &= (val - 1);  //清除最低位的1
+  }
+  return cnt;
+}
+
+Address::sptr Address::Create(const sockaddr* addr, socklen_t addrlen) {
+  Address::sptr address{nullptr};
+  if (nullptr == addr)
+    return address;
+
+  switch (addr->sa_family) {
+    case AF_INET:
+      address = std::make_shared<IPV4Address>(*(sockaddr_in*)addr);
+      break;
+    case AF_INET6:
+      address = std::make_shared<IPV6Address>(*(sockaddr_in6*)addr);
+      break;
+    default:
+      address = std::make_shared<UnknownAddress>(*addr);
+      break;
+  }
+  return address;
+}
+
+bool Address::Lookup(std::vector<Address::sptr>& result,
+                     const std::string& host, int family, int type,
+                     int protocol) {
+  addrinfo hints, *results, *next;
+  hints.ai_flags = 0;
+  hints.ai_family = family;
+  hints.ai_protocol = protocol;
+  hints.ai_socktype = type;
+  hints.ai_addrlen = 0;
+  hints.ai_canonname = nullptr;
+  hints.ai_addr = nullptr;
+  hints.ai_next = nullptr;
+
+  std::string node;
+  const char* service{nullptr};
+
+  //check ipv6， [....]:80
+  if (!host.empty() && host[0] == '[') {
+    const char* endipv6 =
+        (const char*)memchr(host.c_str() + 1, ']', host.size() - 1);
+    if (nullptr != endipv6) {
+      if (*(endipv6 + 1) == ':') {
+        service = endipv6 + 2;  //端口号，如80
+      }
+      node = host.substr(1, endipv6 - host.c_str() - 1);  //ipv6的地址
+    }
+  }
+
+  //ipv4:port 或 domain:port形式
+  if (node.empty()) {
+    service = (const char*)memchr(host.c_str(), ':', host.size() - 1);
+    if (nullptr != service) {
+      if (nullptr ==
+          memchr(service + 1, ':',
+                 host.c_str() + host.size() - service - 1)) {  //排除ipv6
+        node = host.substr(0, service - host.c_str());
+        ++service;
+      }
+    }
+  }
+
+  if (node.empty()) {
+    node = host;
+  }
+
+  int error =
+      getaddrinfo(node.c_str(), service, &hints, &results);  //resulst是一个链表
+  if (error) {
+    ELOG_ERROR(g_logger) << "Address::Lockup ( " << host << ", " << family
+                         << ", " << type << ", " << protocol
+                         << ") err: " << error
+                         << ", error str: " << strerror(error);
+    return false;
+  }
+
+  next = results;
+  while (next) {
+    result.emplace_back(Create(next->ai_addr, next->ai_addrlen));
+    ELOG_DEBUG(g_logger) << "family: " << next->ai_family
+                         << ", sock type: " << next->ai_socktype;
+    next = next->ai_next;
+  }
+  freeaddrinfo(results);
+  return !result.empty();
+}
+
+Address::sptr Address::LookupAny(const std::string& host, int family, int type,
+                                 int protocol) {
+  std::vector<Address::sptr> result{};
+  if (Lookup(result, host, family, type, protocol)) {
+    return result[0];
+  }
+  return nullptr;
+}
+
+Address::sptr Address::LookupAnyIPAddress(const std::string& host, int family,
+                                          int type, int protocol) {
+  std::vector<Address::sptr> result{};
+  if (Lookup(result, host, family, type, protocol)) {
+    for (auto& item : result) {
+      IPAddress::sptr v = std::dynamic_pointer_cast<IPAddress>(item);
+      if (nullptr != v) {
+        return v;
+      }
+    }
+  }
+  return nullptr;
+}
+
+bool Address::GetInterfaceAddresses(
+    std::multimap<std::string, std::pair<Address::sptr, uint32_t>>& result,
+    int family) {
+  struct ifaddrs *next, *results;
+  if (0 != getifaddrs(&results)) {
+    ELOG_ERROR(g_logger) << "Address::GetInterfaceAddresses getifaddrs err: "
+                         << errno << ", errstr: " << strerror(errno);
+    return false;
+  }
+
+  try {
+    for (next = results; next; next = next->ifa_next) {
+      if (family != AF_UNSPEC && family != next->ifa_addr->sa_family)
+        continue;
+      Address::sptr addr{nullptr};
+      uint32_t prefix_len = ~0u;
+      switch (next->ifa_addr->sa_family) {
+        case AF_INET: {
+          addr = Create(next->ifa_addr, sizeof(sockaddr_in));
+          uint32_t netmask = ((sockaddr_in*)next->ifa_netmask)->sin_addr.s_addr;
+          prefix_len = CountBitIsOne(netmask);
+        } break;
+        case AF_INET6: {
+          addr = Create(next->ifa_addr, sizeof(sockaddr_in6));
+          in6_addr& netmask = ((sockaddr_in6*)next->ifa_netmask)->sin6_addr;
+          prefix_len = 0;
+          for (int i = 0; i < 16; ++i) {
+            prefix_len += CountBitIsOne(netmask.s6_addr[i]);
+          }
+        } break;
+        default:
+          break;
+          break;
+      }
+
+      if (nullptr != addr) {
+        result.insert({next->ifa_name, {addr, prefix_len}});
+      }
+    }
+  } catch (...) {
+    ELOG_ERROR(g_logger) << "Address::GetInterfaceAddresses exception";
+    freeifaddrs(results);
+    return false;
+  }
+  freeifaddrs(results);
+  return !result.empty();
+}
+
+bool Address::GetInterfaceAddresses(
+    std::vector<std::pair<Address::sptr, uint32_t>>& result,
+    const std::string& iface, int family) {
+  if (iface.empty() || iface == "*") {
+    if (family == AF_INET || family == AF_INET) {
+      result.emplace_back(std::make_pair(std::make_shared<IPV4Address>(), 0));
+    }
+    if (family == AF_INET6 || family == AF_INET6) {
+      result.emplace_back(std::make_pair(std::make_shared<IPV6Address>(), 0));
+    }
+    return true;
+  }
+
+  std::multimap<std::string, std::pair<Address::sptr, uint32_t>> results;
+  if (!GetInterfaceAddresses(results, family)) {
+    return false;
+  }
+
+  auto range = results.equal_range(iface);
+  for (auto it = range.first; it != range.second; ++it) {
+    result.emplace_back(it->second);
+  }
+  return !result.empty();
 }
 
 int Address::getFamily() const {
@@ -59,7 +254,7 @@ IPV4Address::IPV4Address(const sockaddr_in& addr) {
 IPV4Address::IPV4Address(uint32_t address, uint16_t port) {
   memset(&m_addr, 0, sizeof(m_addr));
   m_addr.sin_family = AF_INET;
-  m_addr.sin_port = byteswapOnLittleEndian(port);            //转成大端字节序
+  m_addr.sin_port = byteswapOnLittleEndian(port);  //转成大端字节序
   m_addr.sin_addr.s_addr = byteswapOnLittleEndian(address);  //转成大端字节序
 }
 
