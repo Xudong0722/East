@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-14 18:46:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-14 23:18:17
+ * @Last Modified time: 2025-04-24 00:36:34
  */
 
 #include "Address.h"
@@ -244,6 +244,38 @@ bool Address::operator==(const Address& rhs) const {
 
 bool Address::operator!=(const Address& rhs) const {
   return !(*this == rhs);
+}
+
+IPAddress::sptr IPAddress::Create(const char* address, uint32_t port) {
+  if (nullptr == address)
+    return nullptr;
+  addrinfo hints, *results;
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_flags = 0;
+  hints.ai_family = AF_UNSPEC;
+
+  int error = getaddrinfo(
+      address, nullptr, &hints, &results);  //resulst是一个链表
+  if (error) {
+    ELOG_ERROR(g_logger) << "Address::Create ( " << address << ", " << port
+                         << ") err: " << error
+                         << ", error str: " << strerror(error);
+    return nullptr;
+  }
+
+  IPAddress::sptr result{nullptr};
+  try{
+    result = std::dynamic_pointer_cast<IPAddress>(Address::Create(results->ai_addr,
+                                                                results->ai_addrlen));
+    if(nullptr != result) {
+      result->setPort(port);
+    }
+  }catch(...) {
+    freeaddrinfo(results);
+    return nullptr;
+  }
+  freeaddrinfo(results);
+  return result;
 }
 
 //IPV4

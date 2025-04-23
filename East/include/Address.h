@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-14 18:46:44 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-14 21:36:26
+ * @Last Modified time: 2025-04-24 00:31:00
  */
 
 #pragma once
@@ -36,10 +36,10 @@ class Address {
 
   static bool GetInterfaceAddresses(
       std::multimap<std::string, std::pair<Address::sptr, uint32_t>>& result,
-      int family);
+      int family = AF_UNSPEC);
   static bool GetInterfaceAddresses(
       std::vector<std::pair<Address::sptr, uint32_t>>& result,
-      const std::string& iface, int family);
+      const std::string& iface, int family = AF_UNSPEC);
 
   int getFamily() const;
 
@@ -58,6 +58,7 @@ class IPAddress : public Address {
  public:
   using sptr = std::shared_ptr<IPAddress>;
 
+  static sptr Create(const char* address = nullptr, uint32_t port = 0);
   virtual IPAddress::sptr getBroadcastAddr(uint32_t prefix_len) const = 0;
   virtual IPAddress::sptr getNetworkAddr(uint32_t prefix_len) const = 0;
   virtual IPAddress::sptr getSubnetMask(uint32_t prefix_len) const = 0;

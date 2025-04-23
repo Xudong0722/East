@@ -67,5 +67,8 @@ target_link_libraries(test_iomanager "${LIBS}")
 add_executable(test_hook tests/test_hook.cc)
 target_link_libraries(test_hook "${LIBS}")
 
+add_executable(test_address tests/test_address.cc)
+target_link_libraries(test_address "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
