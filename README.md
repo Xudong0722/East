@@ -378,6 +378,16 @@ epoll 事件来了？
 
 
 几个关键系统api：
-getaddrinfo
-getifaddrs
-inet_pton
+```c++
+/*根据主机和服务找到符合条件的地址*/
+int getaddrinfo(const char *restrict node,
+                const char *restrict service,
+                const struct addrinfo *restrict hints,
+                struct addrinfo **restrict res);
+
+/*函数创建一个结构体链表，描述本地系统的网络接口，并将链表第一项的地址存储在 *ifap 中。*/
+int getifaddrs(struct ifaddrs **ifap); 
+
+/*此函数将字符串 src 转换为 af 地址族中的网络地址结构，然后将该网络地址结构复制到 dst。af 参数必须是 AF_INET 或 AF_INET6。dst 按网络字节顺序写入。*/
+int inet_pton(int af, const char *restrict src, void *restrict dst);
+```
