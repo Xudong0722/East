@@ -10,6 +10,7 @@
 #include "FdManager.h"
 #include "Elog.h"
 #include "Macro.h"
+#include "Hook.h"
 
 namespace East {
 
@@ -105,7 +106,7 @@ namespace East {
     }
 
     bool Socket::bind(const Address::sptr addr) {
-      if(EAST_UNLIKELY(!isValid())) {
+      if(!isValid()) {
         newSocket();
         if(EAST_UNLIKELY(!isValid())) {
           ELOG_ERROR(g_logger) << "bind(" << addr->toString() << ") err: " << errno;
@@ -127,6 +128,36 @@ namespace East {
     }
   
     bool Socket::connect(const Address::sptr addr, uint64_t timeout_ms) {
+        if(!isValid()) {
+            newSocket();
+            if(EAST_UNLIKELY(!isValid())) {
+                ELOG_ERROR(g_logger) << "connect(" << addr->toString() << ") err: " << errno;
+                return false;
+            }
+        }
+
+      if(EAST_UNLIKELY(addr->getFamily() != m_family)) {
+        ELOG_ERROR(g_logger) << "connect(" << addr->toString() << ") err: " << errno;
+        return false;   
+      }
+      
+      if(timeout_ms == (uint64_t)-1) {
+        if(::connect(m_sock, addr->getAddr(), addr->getAddrLen())) {
+          ELOG_ERROR(g_logger) << "connect(" << addr->toString() << ") err: " << errno;
+          close();
+          return false;
+        }
+      }else {
+        if(::connect_with_timeout(m_sock, addr->getAddr(), addr->getAddrLen(), timeout_ms)) {
+          ELOG_ERROR(g_logger) << "connect(" << addr->toString() << ") err: " << errno;
+          close();
+          return false;
+        }
+      }
+      
+      m_is_connected = true;
+      getLocalAddr();
+      getRemoteAddr();
       return true;
     }
   

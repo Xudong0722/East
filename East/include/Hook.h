@@ -98,4 +98,7 @@ extern getsockopt_func getsockopt_f;
 typedef int (*setsockopt_func)(int sockfd, int level, int optname,
                                const void* optval, socklen_t optlen);
 extern setsockopt_func setsockopt_f;
+
+extern int connect_with_timeout(int fd, const struct sockaddr* addr,
+                                 socklen_t addrlen, uint64_t timeout);
 }
