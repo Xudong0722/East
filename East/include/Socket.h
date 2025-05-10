@@ -5,6 +5,7 @@
  * @Last Modified time: 2025-04-25 00:03:38
  */
 
+#pragma once
 #include <memory>
 #include "Address.h"
 #include "Noncopyable.h"
@@ -39,16 +40,18 @@ public:
 
   virtual Socket::sptr accept();
 
-  virtual bool bind(const Address::sptr addr);
+  bool init(int sock);
 
-  virtual bool connect(const Address::sptr addr, uint64_t timeout_ms = -1);
+  bool bind(const Address::sptr addr);
 
-  virtual bool reconnect(uint64_t timeout_ms = -1);
+  bool connect(const Address::sptr addr, uint64_t timeout_ms = -1);
+
+  bool reconnect(uint64_t timeout_ms = -1);
 
   //backlog 未完成连接队列的最大长度
-  virtual bool listen(int backlog = SOMAXCONN);
+  bool listen(int backlog = SOMAXCONN);
 
-  virtual bool close();
+  bool close();
 
   /// @brief 发送数据
   /// @param buffer 待发送数据
@@ -58,7 +61,7 @@ public:
   ///    retval > 0 发送成功对应大小的数据
   ///    retval = 0 socket关闭
   ///    retval < 0 socket出错
-  virtual int send(const void* buffer, size_t length, int flags = 0);
+  int send(const void* buffer, size_t length, int flags = 0);
 
   /// @brief 发送数据
   /// @param buffer 待发送数据
@@ -69,11 +72,46 @@ public:
   ///    retval > 0 发送成功对应大小的数据
   ///    retval = 0 socket关闭
   ///    retval < 0 socket出错
-  virtual int sendTo(const void* buffer, size_t length, const Address::sptr to, int flags = 0);
+  int sendTo(const void* buffer, size_t length, const Address::sptr to, int flags = 0);
 
+  int send(const iovec* buffers, size_t length, int flags = 0);
+  int sendTo(const iovec* buffers, size_t length, const Address::sptr to, int flags = 0);
 
-  virtual int sendTo(const iovec* buffers, size_t length, const Address::sptr to, int flags = 0);
+  int recv(void* buffer, size_t length, int flags = 0);
+  int recv(iovec* buffers, size_t length, int flags = 0);
+  int recvFrom(void* buffer, size_t length, Address::sptr from, int flags = 0);
+  int recvFrom(iovec* buffers, size_t length, Address::sptr from, int flags = 0);
+
+  Address::sptr getLocalAddr() const;
+  Address::sptr getRemoteAddr() const;
+
+  int getFamily() const;
+  int getType() const;
+  int getProtocol() const;
+
+  bool isConnected() const;
+  bool isValid() const;
+  int getError();
+
+  std::ostream& dump(std::ostream& os) const;
+  int getSocket() const;
+
+  bool cancelRead();
+  bool cancelWrite();
+  bool cancelAccept();
+  bool cancelAll();
 private:
+  void initSocket();
+  void newSocket();
+
+private:
+  int m_sock{0};
+  int m_family{0};
+  int m_type{0};
+  int m_protocol{0};
+  bool m_is_connected{false};
+  Address::sptr m_local_addr{nullptr};
+  Address::sptr m_remote_addr{nullptr};
 };
 
 } // namespace East

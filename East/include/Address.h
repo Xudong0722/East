@@ -58,13 +58,13 @@ class IPAddress : public Address {
  public:
   using sptr = std::shared_ptr<IPAddress>;
 
-  static sptr Create(const char* address = nullptr, uint32_t port = 0);
+  static sptr Create(const char* address = nullptr, uint16_t port = 0);
   virtual IPAddress::sptr getBroadcastAddr(uint32_t prefix_len) const = 0;
   virtual IPAddress::sptr getNetworkAddr(uint32_t prefix_len) const = 0;
   virtual IPAddress::sptr getSubnetMask(uint32_t prefix_len) const = 0;
 
-  virtual uint32_t getPort() const = 0;
-  virtual void setPort(uint32_t port) = 0;
+  virtual uint16_t getPort() const = 0;
+  virtual void setPort(uint16_t port) = 0;
 };
 
 class IPV4Address : public IPAddress {
@@ -74,7 +74,7 @@ class IPV4Address : public IPAddress {
   IPV4Address(const sockaddr_in& addr);
   IPV4Address(uint32_t address = INADDR_ANY, uint16_t port = 0);
 
-  static sptr Create(const char* address = nullptr, uint32_t port = 0);
+  static sptr Create(const char* address = nullptr, uint16_t port = 0);
   //Address
   const sockaddr* getAddr() const override;
   socklen_t getAddrLen() const override;
@@ -84,8 +84,8 @@ class IPV4Address : public IPAddress {
   IPAddress::sptr getBroadcastAddr(uint32_t prefix_len) const override;
   IPAddress::sptr getNetworkAddr(uint32_t prefix_len) const override;
   IPAddress::sptr getSubnetMask(uint32_t prefix_len) const override;
-  uint32_t getPort() const override;
-  void setPort(uint32_t port) override;
+  uint16_t getPort() const override;
+  void setPort(uint16_t port) override;
 
  private:
   sockaddr_in m_addr;
@@ -109,8 +109,8 @@ class IPV6Address : public IPAddress {
   IPAddress::sptr getBroadcastAddr(uint32_t prefix_len) const override;
   IPAddress::sptr getNetworkAddr(uint32_t prefix_len) const override;
   IPAddress::sptr getSubnetMask(uint32_t prefix_len) const override;
-  uint32_t getPort() const override;
-  void setPort(uint32_t port) override;
+  uint16_t getPort() const override;
+  void setPort(uint16_t port) override;
 
  private:
   sockaddr_in6 m_addr;

@@ -246,7 +246,7 @@ bool Address::operator!=(const Address& rhs) const {
   return !(*this == rhs);
 }
 
-IPAddress::sptr IPAddress::Create(const char* address, uint32_t port) {
+IPAddress::sptr IPAddress::Create(const char* address, uint16_t port) {
   if (nullptr == address)
     return nullptr;
   addrinfo hints, *results;
@@ -290,7 +290,7 @@ IPV4Address::IPV4Address(uint32_t address, uint16_t port) {
   m_addr.sin_addr.s_addr = byteswapOnLittleEndian(address);  //转成大端字节序
 }
 
-IPV4Address::sptr IPV4Address::Create(const char* address, uint32_t port) {
+IPV4Address::sptr IPV4Address::Create(const char* address, uint16_t port) {
   if (nullptr == address)
     return nullptr;
   IPV4Address::sptr addr = std::make_shared<IPV4Address>();
@@ -352,11 +352,11 @@ IPAddress::sptr IPV4Address::getSubnetMask(uint32_t prefix_len) const {
   return std::make_shared<IPV4Address>(subnet_mask);
 }
 
-uint32_t IPV4Address::getPort() const {
+uint16_t IPV4Address::getPort() const {
   return byteswapOnLittleEndian(m_addr.sin_port);
 }
 
-void IPV4Address::setPort(uint32_t port) {
+void IPV4Address::setPort(uint16_t port) {
   m_addr.sin_port = byteswapOnLittleEndian(port);
 }
 
@@ -460,11 +460,11 @@ IPAddress::sptr IPV6Address::getSubnetMask(uint32_t prefix_len) const {
   return std::make_shared<IPV6Address>(subnet);
 }
 
-uint32_t IPV6Address::getPort() const {
+uint16_t IPV6Address::getPort() const {
   return byteswapOnLittleEndian(m_addr.sin6_port);
 }
 
-void IPV6Address::setPort(uint32_t port) {
+void IPV6Address::setPort(uint16_t port) {
   m_addr.sin6_port = byteswapOnLittleEndian(port);
 }
 
