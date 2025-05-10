@@ -502,6 +502,10 @@ socklen_t UnixAddress::getAddrLen() const {
   return m_length;
 }
 
+void UnixAddress::setAddrLen(uint32_t len) {
+  m_length = len;
+}
+
 std::ostream& UnixAddress::dump(std::ostream& os) const {
   if (m_length > offsetof(sockaddr_un, sun_path) &&
       m_addr.sun_path[0] == '\0') {

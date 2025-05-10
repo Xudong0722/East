@@ -126,6 +126,7 @@ class UnixAddress : public Address {
   //Address
   const sockaddr* getAddr() const override;
   socklen_t getAddrLen() const override;
+  void setAddrLen(uint32_t len);
   std::ostream& dump(std::ostream& os) const override;
 
  private:

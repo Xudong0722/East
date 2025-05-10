@@ -167,47 +167,139 @@ namespace East {
   
     //backlog 未完成连接队列的最大长度
     bool Socket::listen(int backlog) {
-        return true;
+      if(!isValid()) {
+        ELOG_ERROR(g_logger) << "listen error sock = -1";
+        return false;
+      }
+
+      if(::listen(m_sock, backlog)) {
+        ELOG_ERROR(g_logger) << "listen(" << m_sock << ", " << backlog
+                             << ") err: " << errno;
+        return false;
+      }
+      return true;
     }
   
     bool Socket::close() {
+      if(!m_is_connected && m_sock == -1) {
         return true;
+      }
+      m_is_connected = false;
+      if(m_sock != -1) {
+        ::close(m_sock);
+        m_sock = -1;
+      }
+      return false;
     }
   
     int Socket::send(const void* buffer, size_t length, int flags) {
-        return 0;
+        if(m_is_connected) {
+          return ::send(m_sock, buffer, length, flags);
+        }
+        return -1;
     }
   
     int Socket::sendTo(const void* buffer, size_t length, const Address::sptr to, int flags) {
-        return 0;
+        if(m_is_connected) {
+            return ::sendto(m_sock, buffer, length, flags, to->getAddr(), to->getAddrLen());
+        }
+        return -1;
     }
   
     int Socket::send(const iovec* buffers, size_t length, int flags) {
-        return 0;
+        if(m_is_connected) {
+          msghdr msg;
+          memset(&msg, 0, sizeof(msg));
+          msg.msg_iov = (iovec*)buffers;
+          msg.msg_iovlen = length;
+          return ::sendmsg(m_sock, &msg, flags);
+        }
+        return -1;
     }
 
     int Socket::sendTo(const iovec* buffers, size_t length, const Address::sptr to, int flags) {
-        return 0;
+        if(m_is_connected) {
+            msghdr msg;
+            memset(&msg, 0, sizeof(msg));
+            msg.msg_iov = (iovec*)buffers;
+            msg.msg_iovlen = length;
+            msg.msg_name = (void*)(to->getAddr());
+            msg.msg_namelen = to->getAddrLen();
+            return ::sendmsg(m_sock, &msg, flags);
+        }
+        return -1;
     }
   
     int Socket::recv(void* buffer, size_t length, int flags) {
-        return 0;
+        if(m_is_connected) {
+          return ::recv(m_sock, buffer, length, flags);
+        }
+        return -1;
     }
 
     int Socket::recv(iovec* buffers, size_t length, int flags) {
-        return 0;
+        if(m_is_connected) {
+          msghdr msg;
+          memset(&msg, 0, sizeof(msg));
+          msg.msg_iov = (iovec*)buffers;
+          msg.msg_iovlen = length;
+          return ::recvmsg(m_sock, &msg, flags);
+        }
+        return -1;
     }
 
     int Socket::recvFrom(void* buffer, size_t length, Address::sptr from, int flags) {
-        return 0;
+        if(m_is_connected) {
+            socklen_t len = from->getAddrLen();
+            return ::recvfrom(m_sock, buffer, length, flags, const_cast<sockaddr*>(from->getAddr()), &len);
+        }
+        return -1;
     }
 
     int Socket::recvFrom(iovec* buffers, size_t length, Address::sptr from, int flags) {
-        return 0;
+        if(m_is_connected) {
+            msghdr msg;
+            memset(&msg, 0, sizeof(msg));
+            msg.msg_iov = (iovec*)buffers;
+            msg.msg_iovlen = length;
+            msg.msg_name = const_cast<sockaddr*>(from->getAddr());
+            msg.msg_namelen = from->getAddrLen();
+            return ::recvmsg(m_sock, &msg, flags);
+        }
+        return -1;
     }
   
     Address::sptr Socket::getLocalAddr() const {
-      return m_local_addr;
+      if(nullptr != m_local_addr) {
+        return m_local_addr;
+      }
+      Address::sptr addr;
+      switch(m_family) {
+        case AF_INET:
+          addr = std::make_shared<IPV4Address>();
+          break;
+        case AF_INET6:
+          addr = std::make_shared<IPV6Address>();
+          break;
+        case AF_UNIX:
+          addr = std::make_shared<UnixAddress>();
+          break;
+        default:
+          addr = std::make_shared<UnknownAddress>(m_family);
+          break;
+      }
+        socklen_t len = addr->getAddrLen();
+        if(getpeername(m_sock, addr->getAddr(), &len)) {
+          ELOG_ERROR(g_logger) << "getpeername(" << m_sock << ") err: " << errno;
+          return Address::sptr(new UnknownAddress(m_family));
+        }
+
+        if(m_family == AF_UNIX) {
+            UnixAddress::sptr unix_addr = std::dynamic_pointer_cast<UnixAddress>(addr);
+            unix_addr->setAddrLen(len);
+        }
+        m_local_addr = addr;
+        return m_local_addr;
     }
 
     Address::sptr Socket::getRemoteAddr() const {
