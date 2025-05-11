@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-14 18:46:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-24 00:41:10
+ * @Last Modified time: 2025-05-11 18:44:09
  */
 
 #include "Address.h"
@@ -127,7 +127,7 @@ Address::sptr Address::LookupAny(const std::string& host, int family, int type,
   return nullptr;
 }
 
-Address::sptr Address::LookupAnyIPAddress(const std::string& host, int family,
+IPAddress::sptr Address::LookupAnyIPAddress(const std::string& host, int family,
                                           int type, int protocol) {
   std::vector<Address::sptr> result{};
   if (Lookup(result, host, family, type, protocol)) {
@@ -254,8 +254,8 @@ IPAddress::sptr IPAddress::Create(const char* address, uint16_t port) {
   hints.ai_flags = 0;
   hints.ai_family = AF_UNSPEC;
 
-  int error = getaddrinfo(
-      address, nullptr, &hints, &results);  //resulst是一个链表
+  int error =
+      getaddrinfo(address, nullptr, &hints, &results);  //resulst是一个链表
   if (error) {
     ELOG_ERROR(g_logger) << "Address::Create ( " << address << ", " << port
                          << ") err: " << error
@@ -264,13 +264,13 @@ IPAddress::sptr IPAddress::Create(const char* address, uint16_t port) {
   }
 
   IPAddress::sptr result{nullptr};
-  try{
-    result = std::dynamic_pointer_cast<IPAddress>(Address::Create(results->ai_addr,
-                                                                results->ai_addrlen));
-    if(nullptr != result) {
+  try {
+    result = std::dynamic_pointer_cast<IPAddress>(
+        Address::Create(results->ai_addr, results->ai_addrlen));
+    if (nullptr != result) {
       result->setPort(port);
     }
-  }catch(...) {
+  } catch (...) {
     freeaddrinfo(results);
     return nullptr;
   }

@@ -7,6 +7,7 @@
 
 #pragma once
 #include <fcntl.h>
+#include <stdint.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -100,5 +101,5 @@ typedef int (*setsockopt_func)(int sockfd, int level, int optname,
 extern setsockopt_func setsockopt_f;
 
 extern int connect_with_timeout(int fd, const struct sockaddr* addr,
-                                 socklen_t addrlen, uint64_t timeout);
+                                socklen_t addrlen, uint64_t timeout);
 }

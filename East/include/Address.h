@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-14 18:46:44 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-24 00:42:49
+ * @Last Modified time: 2025-05-11 18:44:09
  */
 
 #pragma once
@@ -17,6 +17,7 @@
 #include <vector>
 
 namespace East {
+class IPAddress;
 class Address {
  public:
   using sptr = std::shared_ptr<Address>;
@@ -30,7 +31,7 @@ class Address {
                      int type = SOCK_STREAM, int protocol = 0);
   static sptr LookupAny(const std::string& host, int family = AF_UNSPEC,
                         int type = SOCK_STREAM, int protocol = 0);
-  static sptr LookupAnyIPAddress(const std::string& host,
+  static IPAddress::sptr LookupAnyIPAddress(const std::string& host,
                                  int family = AF_UNSPEC, int type = SOCK_STREAM,
                                  int protocol = 0);
 
