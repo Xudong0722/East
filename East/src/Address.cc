@@ -127,8 +127,8 @@ Address::sptr Address::LookupAny(const std::string& host, int family, int type,
   return nullptr;
 }
 
-IPAddress::sptr Address::LookupAnyIPAddress(const std::string& host, int family,
-                                          int type, int protocol) {
+std::shared_ptr<IPAddress> Address::LookupAnyIPAddress(const std::string& host, int family,
+                                            int type, int protocol) {
   std::vector<Address::sptr> result{};
   if (Lookup(result, host, family, type, protocol)) {
     for (auto& item : result) {

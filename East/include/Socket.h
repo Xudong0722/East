@@ -15,7 +15,7 @@ class Socket : public std::enable_shared_from_this<Socket>, noncopyable {
  public:
   using sptr = std::shared_ptr<Socket>;
   using wptr = std::weak_ptr<Socket>;
-  
+
   enum FAMILY {
     IPv4 = AF_INET,
     IPv6 = AF_INET6,
@@ -27,7 +27,7 @@ class Socket : public std::enable_shared_from_this<Socket>, noncopyable {
     UDP = SOCK_DGRAM,
     RAW = SOCK_RAW,
   };
-  
+
   static Socket::sptr CreateTCP(East::Address::sptr addr);
   static Socket::sptr CreateUDP(East::Address::sptr addr);
   static Socket::sptr CreateTCPSocket();
@@ -36,7 +36,6 @@ class Socket : public std::enable_shared_from_this<Socket>, noncopyable {
   static Socket::sptr CreateUDPSocket6();
   static Socket::sptr CreateUnixTCPSocket();
   static Socket::sptr CreateUnixUDPSocket();
-
 
   Socket(int family, int type, int protocol);
   ~Socket();

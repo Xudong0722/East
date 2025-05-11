@@ -104,7 +104,7 @@ void FdManager::deleteFd(int fd) {
   //     }
   // }
 
-  RWMutexType::WLockGuard wlock(m_mutex);
+  //RWMutexType::WLockGuard wlock(m_mutex);
   if (fd >= (int)m_fds.size()) {
     return;
   }

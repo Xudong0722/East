@@ -395,7 +395,7 @@ bool Socket::isConnected() const {
 }
 
 bool Socket::isValid() const {
-  return 0;
+  return m_sock != -1;
 }
 
 int Socket::getError() {
