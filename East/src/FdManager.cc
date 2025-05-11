@@ -66,6 +66,7 @@ FdManager::~FdManager() {}
 FileDescriptor::sptr FdManager::getFd(int fd, bool create_when_notfound) {
   if (fd < 0)
     return nullptr;
+  
   {
     RWMutexType::RLockGuard rlock(m_mutex);
     if (fd >= (int)m_fds.size()) {
@@ -83,13 +84,17 @@ FileDescriptor::sptr FdManager::getFd(int fd, bool create_when_notfound) {
     }
   }
 
+
   RWMutexType::WLockGuard wlock(m_mutex);
   auto new_fd = std::make_shared<FileDescriptor>(fd);
 
-  auto tmp = m_fds;
-  tmp.resize(fd * 1.5);  //now, fd * 1.5 > m_fds.size()
-  copy(m_fds.begin(), m_fds.end(), tmp.begin());
-  m_fds.swap(tmp);
+  if((int)m_fds.size() <= fd) {
+    auto tmp = m_fds;
+    tmp.resize(fd * 1.5);  //now, fd * 1.5 > m_fds.size()
+    copy(m_fds.begin(), m_fds.end(), tmp.begin());
+    m_fds.swap(tmp);
+  }
+
   m_fds[fd] = std::move(new_fd);
   return m_fds[fd];
 }
@@ -97,14 +102,8 @@ FileDescriptor::sptr FdManager::getFd(int fd, bool create_when_notfound) {
 void FdManager::deleteFd(int fd) {
   if (fd < 0)
     return;
-  // {
-  //     RWMutexType::RLockGuard rlock(m_mutex);
-  //     if(fd >= m_fds.size()) {
-  //         return ;
-  //     }
-  // }
 
-  //RWMutexType::WLockGuard wlock(m_mutex);
+  RWMutexType::WLockGuard wlock(m_mutex);  //Deaklock, todo
   if (fd >= (int)m_fds.size()) {
     return;
   }
