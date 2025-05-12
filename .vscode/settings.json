@@ -74,6 +74,7 @@
         "condition_variable": "cpp",
         "typeindex": "cpp",
         "shared_mutex": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "*.def": "cpp"
     }
 }

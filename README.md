@@ -387,7 +387,14 @@ int getaddrinfo(const char *restrict node,
 
 /*函数创建一个结构体链表，描述本地系统的网络接口，并将链表第一项的地址存储在 *ifap 中。*/
 int getifaddrs(struct ifaddrs **ifap); 
-
+    
 /*此函数将字符串 src 转换为 af 地址族中的网络地址结构，然后将该网络地址结构复制到 dst。af 参数必须是 AF_INET 或 AF_INET6。dst 按网络字节顺序写入。*/
 int inet_pton(int af, const char *restrict src, void *restrict dst);
 ```
+
+## Socket
+
+
+
+## 序列化
+因为涉及到网络IO，所以我们需要将对象转换成可以网络传输或是可以存储的字节流
