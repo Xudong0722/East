@@ -83,10 +83,9 @@ FileDescriptor::sptr FdManager::getFd(int fd, bool create_when_notfound) {
       }
     }
   }
-
-
-  RWMutexType::WLockGuard wlock(m_mutex);
+  //RWMutexType::WLockGuard wlock(m_mutex);   //deadlock
   auto new_fd = std::make_shared<FileDescriptor>(fd);
+  RWMutexType::WLockGuard wlock(m_mutex);
 
   if((int)m_fds.size() <= fd) {
     auto tmp = m_fds;
@@ -103,7 +102,7 @@ void FdManager::deleteFd(int fd) {
   if (fd < 0)
     return;
 
-  RWMutexType::WLockGuard wlock(m_mutex);  //Deaklock, todo
+  RWMutexType::WLockGuard wlock(m_mutex); 
   if (fd >= (int)m_fds.size()) {
     return;
   }

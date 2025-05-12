@@ -57,8 +57,7 @@ template <class T>
 class ReadScopedLock : private noncopymoveable {
  public:
   ReadScopedLock(T& lock) : m_lock(lock) {
-    m_lock.rdlock();
-    m_locked = true;
+    this->lock();
   }
 
   ~ReadScopedLock() { unlock(); }
@@ -78,15 +77,14 @@ class ReadScopedLock : private noncopymoveable {
 
  private:
   T& m_lock;
-  bool m_locked;
+  bool m_locked {false};
 };
 
 template <class T>
 class WriteScopedLock : private noncopymoveable {
  public:
   WriteScopedLock(T& lock) : m_lock(lock) {
-    m_lock.wrlock();
-    m_locked = true;
+    this->lock();
   }
 
   ~WriteScopedLock() { unlock(); }
@@ -106,7 +104,7 @@ class WriteScopedLock : private noncopymoveable {
 
  private:
   T& m_lock;
-  bool m_locked;
+  bool m_locked {false};
 };
 
 class RWLock : private noncopymoveable {
