@@ -32,6 +32,12 @@ public:
   ByteArray(size_t base_size = 4096);
   ~ByteArray();
 
+  //zigzag transform
+  static uint32_t EncodeZigZagI32(int32_t n);
+  static uint64_t EncodeZigZagI64(int64_t n);
+  static int32_t DecodeZigZagI32(uint32_t n);
+  static int64_t DecodeZigZagI64(uint64_t n);
+
   //write
   void writeFixInt8(int8_t val);
   void writeFixUInt8(uint8_t val);
@@ -71,7 +77,10 @@ public:
   uint32_t readFixUInt32(); 
   int64_t readFixInt64();
   uint64_t readFixUInt64();
-  
+  int32_t readInt32();
+  uint32_t readUInt32();
+  int64_t readInt64();
+  uint64_t readUInt64();
   float readFloat();
   double readDouble();
 

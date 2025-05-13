@@ -48,7 +48,23 @@ ByteArray::~ByteArray() {
   }
 }
 
-  //write
+uint32_t ByteArray::EncodeZigZagI32(int32_t n) {
+  return (n << 1) ^ (n >> 31);
+}
+
+uint64_t ByteArray::EncodeZigZagI64(int64_t n) {
+  return (n << 1) ^ (n >> 63);
+}
+
+int32_t ByteArray::DecodeZigZagI32(uint32_t n) {
+  return (n >> 1) ^ -(n & 1);
+}
+
+int64_t ByteArray::DecodeZigZagI64(uint64_t n) {
+  return (n >> 1) ^ -(n & 1);
+}
+
+//write
 void ByteArray::writeFixInt8(int8_t val) {
   write(&val, sizeof(val));
 }
@@ -99,20 +115,38 @@ void ByteArray::writeFixUInt64(uint64_t val) {
   write(&val, sizeof(val));
 }
 
-void ByteArray::writeInt32(int32_t val) {
 
+void ByteArray::writeInt32(int32_t val) {
+  //可能为负，我们将其转换一下
+  uint32_t zigzag = EncodeZigZagI32(val);
+  writeUInt32(zigzag);
 }
 
 void ByteArray::writeUInt32(uint32_t val) {
-
+  uint8_t buf[5];  //5*7 > 32
+  uint8_t i = 0;
+  while(val >= 0x80) {  //当前字节不是最后一个字节
+    buf[i++] = (val & 0x7f) | 0x80;  
+    val >>= 7;
+  }
+  buf[i++] = val & 0x7f;
+  write(buf, i);
 }
 
 void ByteArray::writeInt64(int64_t val) {
-
+  uint64_t zigzag = EncodeZigZagI64(val);
+  writeUInt64(zigzag);
 }
 
 void ByteArray::writeUInt64(uint64_t val) {
-
+  uint8_t buf[10];  //10*7 > 64
+  uint8_t i = 0;
+  while(val >= 0x80) {  //当前字节不是最后一个字节
+    buf[i++] = (val & 0x7f) | 0x80;  
+    val >>= 7;
+  }
+  buf[i++] = val & 0x7f;
+  write(buf, i);
 }
 
 void ByteArray::writeFloat(float val) {
@@ -172,6 +206,31 @@ int64_t ByteArray::readFixInt64() {
 }
 
 uint64_t ByteArray::readFixUInt64() {
+
+}
+
+int32_t ByteArray::readInt32() {
+  return DecodeZigZagI32(readUInt32());
+}
+
+uint32_t ByteArray::readUInt32() {
+  uint32_t res{0};
+  for(int i = 0; i<32; i += 7) {
+    uint8_t byte = readFixUInt8();
+    if((byte & 0x80) != 0x80) {
+      res |= ((uint32_t)byte) << i;
+      break;
+    }
+    res |= ((uint32_t)(byte & 0x7f)) << i;
+  }
+  return res;
+}
+
+int64_t readInt64() {
+
+}
+
+uint64_t readUInt64() {
 
 }
 
