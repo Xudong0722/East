@@ -125,9 +125,9 @@ private:
 
 private:
   size_t m_block_size{0};  //内存块的大小
-  size_t m_offset{0};     //当前读写的偏移量
-  size_t m_size{0};      //当前数据的大小
-  size_t m_capacity{0};  //当前总容量
+  size_t m_offset{0};     //当前读写的偏移量 
+  size_t m_size{0};      //实际承载数据的大小
+  size_t m_capacity{0};  //总容量
   int8_t m_endian{0}; //字节序, 默认大端(网络传输默认大端)
   Node* m_root;  //内存块链表的头指针
   Node* m_cur;  //当前内存块的指针

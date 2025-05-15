@@ -5,6 +5,9 @@
  * @Last Modified time: 2025-05-12 23:10:51
  */
 
+#include <cstring>
+#include <string>
+#include <stdexcept>
 #include "ByteArray.h"
 #include "Endian.h"
 
@@ -115,7 +118,6 @@ void ByteArray::writeFixUInt64(uint64_t val) {
   write(&val, sizeof(val));
 }
 
-
 void ByteArray::writeInt32(int32_t val) {
   //可能为负，我们将其转换一下
   uint32_t zigzag = EncodeZigZagI32(val);
@@ -187,12 +189,12 @@ void ByteArray::writeStringWithoutLen(const std::string& val) {
   write(val.c_str(), val.size());
 }
 
-#define READ(type)
-  type tmp{};
-  read(&tmp, sizeof(tmp));
-  if(m_endian == EAST_BYTE_ORDER){
-    return tmp;
-  }
+#define READ(type) \
+  type tmp{};      \
+  read(&tmp, sizeof(tmp));\
+  if(m_endian == EAST_BYTE_ORDER){\
+    return tmp;\
+  }\
   return byteswap(tmp);
 
 int8_t ByteArray::readFixInt8() {
@@ -250,66 +252,208 @@ uint32_t ByteArray::readUInt32() {
   return res;
 }
 
-int64_t readInt64() {
+int64_t ByteArray::readInt64() {
   return DecodeZigZagI64(readUInt64());
 }
 
-uint64_t readUInt64() {
+uint64_t ByteArray::readUInt64() {
   uint64_t res{0};
   for(int i = 0; i<64; i += 7) {
     uint8_t byte = readFixUInt8();
     if((byte & 0x80) != 0x80) {
-      res |= (uint64_t)
+      res |= ((uint64_t)byte) << i;
+      break;
+    }else{
+      res |= ((uint64_t)(byte & 0x7f)) << i;
+    }
+  }
+  return res;
+}
+
+float ByteArray::readFloat() {
+  uint32_t tmp = readUInt32();
+  float val{0.0f};
+  memcpy(&val, &tmp, sizeof(tmp));
+  return val;
+}
+
+double ByteArray::readDouble() {
+  uint64_t tmp = readUInt64();
+  double val{0.0};
+  memcpy(&val, &tmp, sizeof(tmp));
+  return val;
+}
+
+std::string ByteArray::readStringFix16() {
+  uint16_t len = readFixUInt16();
+  if(len == 0) {
+    return std::string{};
+  }
+  std::string str(len, ' ');
+  read(&str[0], len);
+  return str;
+}
+
+std::string ByteArray::readStringFix32() {
+  uint32_t len = readFixUInt32();
+  if(len == 0) {
+    return std::string{};
+  }
+  std::string str(len, ' ');
+  read(&str[0], len);
+  return str;
+}
+
+std::string ByteArray::readStringFix64() {
+  uint64_t len = readFixUInt64();
+  if(len == 0) {
+    return std::string{};
+  }
+  std::string str(len, ' ');
+  read(&str[0], len);
+  return str;
+}
+
+std::string ByteArray::readStringVarint() {
+  uint64_t len = readInt64();
+  if(len == 0) {
+    return std::string{};
+  }
+  std::string str(len, ' ');
+  read(&str[0], len);
+  return str;
+}
+
+void ByteArray::clear() {
+  m_offset = 0;
+  m_size = 0;
+  m_capacity = m_block_size;
+  Node* tmp = m_root;
+  while(tmp) {
+    m_cur = tmp;
+    tmp = tmp->next;
+    delete m_cur;
+  }
+  m_cur = m_root;
+  m_root->next = nullptr;
+}
+
+void ByteArray::write(const void* buf, size_t size) {
+  if(size == 0) return;
+  addCapacity(size);  //尝试扩容，如果足够，什么也不做
+  
+  size_t cur_offset = m_offset % m_block_size;  //当前内存块写到哪里了
+  size_t cur_writeable = m_cur->size - cur_offset;  //当前内存块剩余的可写空间
+  size_t buf_offset{0};
+
+  while(size > 0) {
+    if(cur_writeable >= size) {
+      //当前内存块剩余空间足够
+      memcpy(m_cur->ptr + cur_offset, buf + buf_offset, size);
+      if(m_cur->size == (cur_offset + size)) {
+        m_cur = m_cur->next;
+      }
+      m_offset += size;
+      buf_offset += size;
+      break;
+    }
+    memcpy(m_cur->ptr + cur_offset, buf + buf_offset, cur_writeable);  //先写这么多，剩下的放后面的节点中写
+    m_offset += cur_writeable;
+    size -= cur_writeable;
+    buf_offset += cur_writeable;
+    m_cur = m_cur->next;  //换到下一个内存块
+    cur_offset = 0;
+    cur_writeable = m_cur->size;
+  }
+  if(m_offset > m_size) {
+    m_size = m_offset;
+  }
+}
+
+void ByteArray::read(void* buf, size_t size) {
+  //read一般从头开始读，所以使用前会改变m_offset的位置
+  if(size > getReadableSize()) {
+    throw std::out_of_range("read error");
+  }
+
+  size_t cur_offset = m_offset % m_block_size;
+  size_t cur_readable = m_cur->size - cur_offset;
+  size_t buf_offset{0};
+  
+  while(size > 0) {
+    if(cur_readable >= size) {
+      memcpy((char*)buf + buf_offset, m_cur->ptr + cur_offset, size);
+
+      //如果正好读完，移动下当前内存指针
+      if(cur_offset + size == m_cur->size) {
+        m_cur = m_cur->next;
+      }
+      m_offset += size;
+      buf_offset += size;
+      size = 0;
+    }else{
+      memcpy((char*)buf + buf_offset, m_cur->ptr + cur_offset, cur_readable);
+      m_offset += cur_readable;
+      buf_offset += cur_readable;
+      size -= cur_readable;
+      m_cur = m_cur->next;
+      cur_offset = 0;
+      cur_readable = m_cur->size;
     }
   }
 }
 
-float ByteArray::readFloat() {
-
-}
-
-double ByteArray::readDouble() {
-
-}
-
-std::string ByteArray::readStringFix16() {
-
-}
-
-std::string ByteArray::readStringFix32() {
-
-}
-
-std::string ByteArray::readStringFix64() {
-
-}
-
-std::string ByteArray::readStringVarint() {
-
-}
-
-void ByteArray::clear() {
-
-}
-
-void ByteArray::write(const void* buf, size_t size) {
-
-}
-
-void ByteArray::read(void* buf, size_t size) {
-
-}
-
 void ByteArray::read(void* buf, size_t size, size_t offset) {
+  if(size > (m_size - offset)) {
+    throw std::out_of_range("read error");
+  }
 
+  size_t cur_offset = offset % m_block_size;
+  size_t cur_readable = m_cur->size - cur_offset;
+  size_t buf_offset{0};
+  
+  while(size > 0) {
+    if(cur_readable >= size) {
+      memcpy((char*)buf + buf_offset, m_cur->ptr + cur_offset, size);
+
+      //如果正好读完，移动下当前内存指针
+      if(cur_offset + size == m_cur->size) {
+        m_cur = m_cur->next;
+      }
+      offset += size;
+      buf_offset += size;
+      size = 0;
+    }else{
+      memcpy((char*)buf + buf_offset, m_cur->ptr + cur_offset, cur_readable);
+      offset += cur_readable;
+      buf_offset += cur_readable;
+      size -= cur_readable;
+      m_cur = m_cur->next;
+      cur_offset = 0;
+      cur_readable = m_cur->size;
+    }
+  }
 }
 
 size_t ByteArray::getOffset() const {
-
+  return m_offset;
 }
 
 void ByteArray::setOffset(size_t offset) {
+  if(offset > m_size) {
+    throw std::out_of_range("set offset out of range");
+  }
 
+  m_offset = offset;
+  m_cur = m_root;
+  while(offset >= m_cur->size) {
+    offset -= m_cur->size;
+    m_cur = m_cur->next;
+  }
+
+  if(offset == m_cur->size){
+    m_cur = m_cur->next;
+  }
 }
 
 bool ByteArray::writeToFile(const std::string& file_name) const {
@@ -321,11 +465,11 @@ bool ByteArray::readFromFile(const std::string& file_name) {
 }
 
 size_t ByteArray::getBaseSize() const {
-
+  return m_block_size;
 }
 
 size_t ByteArray::getReadableSize() const {
-
+  return m_size - m_offset;
 }
 
 bool ByteArray::isLittleEndian() const {
@@ -349,7 +493,7 @@ std::string ByteArray::toHexString() const {
 }
 
 uint64_t ByteArray::getReadableBuffers(std::vector<iovec>& buffers, uint64_t len, uint64_t offset) const {
-
+  
 }
 
 uint64_t ByteArray::getWriteableBuffers(std::vector<iovec>& buffers, uint64_t len) {
