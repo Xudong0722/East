@@ -150,64 +150,88 @@ void ByteArray::writeUInt64(uint64_t val) {
 }
 
 void ByteArray::writeFloat(float val) {
-
+  uint32_t tmp{0};
+  memcpy(&tmp, &val, sizeof(val));
+  writeUInt32(tmp);
+  
 }
 
 void ByteArray::writeDouble(double val) {
-
+  uint64_t tmp{0};
+  memcpy(&tmp, &val, sizeof(val));
+  writeUInt64(tmp);
 }
 
 void ByteArray::writeStringFix16(const std::string& val) {
-
+  writeFixUInt16(static_cast<uint16_t>(val.size()));
+  write(val.c_str(), val.size());
 }
 
 void ByteArray::writeStringFix32(const std::string& val) {
-
+  writeFixUInt32(static_cast<uint32_t>(val.size()));
+  write(val.c_str(), val.size());
 }
 
 void ByteArray::writeStringFix64(const std::string& val) {
-
+  writeFixUInt64(val.size());
+  write(val.c_str(), val.size());
 }
 
 void ByteArray::writeStringVarint(const std::string& val) {
-
+  //这里直接用uint64来处理
+  writeUInt64(val.size());
+  write(val.c_str(), val.size());
 }
 
 void ByteArray::writeStringWithoutLen(const std::string& val) {
-
+  write(val.c_str(), val.size());
 }
 
-int8_t ByteArray::readFixInt8() {
+#define READ(type)
+  type tmp{};
+  read(&tmp, sizeof(tmp));
+  if(m_endian == EAST_BYTE_ORDER){
+    return tmp;
+  }
+  return byteswap(tmp);
 
+int8_t ByteArray::readFixInt8() {
+  int8_t v{0};
+  read(&v, sizeof(v));
+  return v;
 }
 
 uint8_t ByteArray::readFixUInt8() {
-
+ uint8_t v{0};
+ read(&v, sizeof(v));
+ return v;
 }
 
 int16_t ByteArray::readFixInt16() {
-
+  READ(int16_t);
 }
 
 uint16_t ByteArray::readFixUInt16() {
-
+  READ(uint16_t);
 }
 
 int32_t ByteArray::readFixInt32() {
-
+  READ(int32_t);
 }
 
 uint32_t ByteArray::readFixUInt32() {
-
+  READ(uint32_t);
 }
 
 int64_t ByteArray::readFixInt64() {
-
+  READ(int64_t);
 }
 
 uint64_t ByteArray::readFixUInt64() {
-
+  READ(uint64_t);
 }
+
+#undef READ
 
 int32_t ByteArray::readInt32() {
   return DecodeZigZagI32(readUInt32());
@@ -227,11 +251,17 @@ uint32_t ByteArray::readUInt32() {
 }
 
 int64_t readInt64() {
-
+  return DecodeZigZagI64(readUInt64());
 }
 
 uint64_t readUInt64() {
-
+  uint64_t res{0};
+  for(int i = 0; i<64; i += 7) {
+    uint8_t byte = readFixUInt8();
+    if((byte & 0x80) != 0x80) {
+      res |= (uint64_t)
+    }
+  }
 }
 
 float ByteArray::readFloat() {
