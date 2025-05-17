@@ -32,9 +32,9 @@ class Address {
   static sptr LookupAny(const std::string& host, int family = AF_UNSPEC,
                         int type = SOCK_STREAM, int protocol = 0);
   static std::shared_ptr<IPAddress> LookupAnyIPAddress(const std::string& host,
-                                            int family = AF_UNSPEC,
-                                            int type = SOCK_STREAM,
-                                            int protocol = 0);
+                                                       int family = AF_UNSPEC,
+                                                       int type = SOCK_STREAM,
+                                                       int protocol = 0);
 
   static bool GetInterfaceAddresses(
       std::multimap<std::string, std::pair<Address::sptr, uint32_t>>& result,

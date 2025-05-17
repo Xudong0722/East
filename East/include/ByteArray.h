@@ -5,18 +5,16 @@
  * @Last Modified time: 2025-05-12 23:11:10
  */
 
+#include <arpa/inet.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <memory>
 #include <string>
 #include <vector>
-#include <arpa/inet.h>
-#include <stddef.h>
 
-namespace East
-{
-class ByteArray
-{
-public:
+namespace East {
+class ByteArray {
+ public:
   using sptr = std::shared_ptr<ByteArray>;
 
   struct Node {
@@ -74,7 +72,7 @@ public:
   int16_t readFixInt16();
   uint16_t readFixUInt16();
   int32_t readFixInt32();
-  uint32_t readFixUInt32(); 
+  uint32_t readFixUInt32();
   int64_t readFixInt64();
   uint64_t readFixUInt64();
   int32_t readInt32();
@@ -93,7 +91,7 @@ public:
 
   void write(const void* buf, size_t size);
   void read(void* buf, size_t size);
-  void read(void* buf, size_t size, size_t offset);
+  void read(void* buf, size_t size, size_t offset) const;
 
   size_t getOffset() const;
   void setOffset(size_t offset);
@@ -105,31 +103,32 @@ public:
 
   size_t getReadableSize() const;  //返回可读的数据大小
 
-  bool isLittleEndian() const;  //是否是小端字节序
+  bool isLittleEndian() const;               //是否是小端字节序
   void setLittleEndian(bool little_endian);  //设置字节序
 
   std::string toString() const;
 
   std::string toHexString() const;  //十六进制字符串
 
-  uint64_t getReadableBuffers(std::vector<iovec>& buffers, uint64_t len, uint64_t offset) const;
+  uint64_t getReadableBuffers(std::vector<iovec>& buffers, uint64_t len,
+                              uint64_t offset) const;
 
   uint64_t getWriteableBuffers(std::vector<iovec>& buffers, uint64_t len);
 
   size_t getSize() const;
 
-private:
+ private:
   void addCapacity(size_t size);  //扩容，如果容量足够，什么也不做
 
-  size_t getCapacity() const; //返回当前的可写入容量
+  size_t getCapacity() const;  //返回当前的可写入容量
 
-private:
+ private:
   size_t m_block_size{0};  //内存块的大小
-  size_t m_offset{0};     //当前读写的偏移量 
-  size_t m_size{0};      //实际承载数据的大小
-  size_t m_capacity{0};  //总容量
-  int8_t m_endian{0}; //字节序, 默认大端(网络传输默认大端)
-  Node* m_root;  //内存块链表的头指针
-  Node* m_cur;  //当前内存块的指针
+  size_t m_offset{0};      //当前读写的偏移量
+  size_t m_size{0};        //实际承载数据的大小
+  size_t m_capacity{0};    //总容量
+  int8_t m_endian{0};      //字节序, 默认大端(网络传输默认大端)
+  Node* m_root;            //内存块链表的头指针
+  Node* m_cur;             //当前内存块的指针
 };
-} // namespace East
+}  // namespace East

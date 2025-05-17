@@ -5,45 +5,40 @@
  * @Last Modified time: 2025-05-12 23:10:51
  */
 
-#include <cstring>
-#include <string>
-#include <stdexcept>
 #include "ByteArray.h"
+#include <cstring>
+#include <iomanip>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include "Elog.h"
 #include "Endian.h"
 
-namespace East
-{
-ByteArray::Node::Node(size_t s) 
-  : ptr(new char[s])
-  , next(nullptr)
-  , size(s) {
-  
-}
+namespace East {
+static East::Logger::sptr g_logger = ELOG_NAME("system");
 
-ByteArray::Node::Node() {
+ByteArray::Node::Node(size_t s) : ptr(new char[s]), next(nullptr), size(s) {}
 
-}
+ByteArray::Node::Node() {}
 
 ByteArray::Node::~Node() {
-  if(nullptr != ptr) {
+  if (nullptr != ptr) {
     delete[] ptr;
   }
 }
 
 ByteArray::ByteArray(size_t base_size)
-  : m_block_size(base_size)
-  , m_offset(0)
-  , m_size(base_size)
-  , m_capacity(base_size)
-  , m_endian(EAST_BIG_ENDIAN)
-  , m_root(new Node(base_size))
-  , m_cur(m_root) {
-  
-}
+    : m_block_size(base_size),
+      m_offset(0),
+      m_size(base_size),
+      m_capacity(base_size),
+      m_endian(EAST_BIG_ENDIAN),
+      m_root(new Node(base_size)),
+      m_cur(m_root) {}
 
 ByteArray::~ByteArray() {
   auto tmp = m_root;
-  while(tmp) {
+  while (tmp) {
     m_cur = tmp;
     tmp = tmp->next;
     delete m_cur;
@@ -77,42 +72,42 @@ void ByteArray::writeFixUInt8(uint8_t val) {
 }
 
 void ByteArray::writeFixInt16(int16_t val) {
-  if(m_endian != EAST_BYTE_ORDER) {
+  if (m_endian != EAST_BYTE_ORDER) {
     val = byteswap(val);
   }
   write(&val, sizeof(val));
 }
 
 void ByteArray::writeFixUInt16(uint16_t val) {
-  if(m_endian != EAST_BYTE_ORDER) {
+  if (m_endian != EAST_BYTE_ORDER) {
     val = byteswap(val);
   }
   write(&val, sizeof(val));
 }
 
 void ByteArray::writeFixInt32(int32_t val) {
-  if(m_endian != EAST_BYTE_ORDER) {
+  if (m_endian != EAST_BYTE_ORDER) {
     val = byteswap(val);
-  }  
+  }
   write(&val, sizeof(val));
 }
 
 void ByteArray::writeFixUInt32(uint32_t val) {
-  if(m_endian != EAST_BYTE_ORDER) {
+  if (m_endian != EAST_BYTE_ORDER) {
     val = byteswap(val);
   }
   write(&val, sizeof(val));
 }
 
 void ByteArray::writeFixInt64(int64_t val) {
-  if(m_endian != EAST_BYTE_ORDER) {
+  if (m_endian != EAST_BYTE_ORDER) {
     val = byteswap(val);
   }
   write(&val, sizeof(val));
 }
 
 void ByteArray::writeFixUInt64(uint64_t val) {
-  if(m_endian != EAST_BYTE_ORDER) {
+  if (m_endian != EAST_BYTE_ORDER) {
     val = byteswap(val);
   }
   write(&val, sizeof(val));
@@ -127,8 +122,8 @@ void ByteArray::writeInt32(int32_t val) {
 void ByteArray::writeUInt32(uint32_t val) {
   uint8_t buf[5];  //5*7 > 32
   uint8_t i = 0;
-  while(val >= 0x80) {  //当前字节不是最后一个字节
-    buf[i++] = (val & 0x7f) | 0x80;  
+  while (val >= 0x80) {  //当前字节不是最后一个字节
+    buf[i++] = (val & 0x7f) | 0x80;
     val >>= 7;
   }
   buf[i++] = val & 0x7f;
@@ -143,8 +138,8 @@ void ByteArray::writeInt64(int64_t val) {
 void ByteArray::writeUInt64(uint64_t val) {
   uint8_t buf[10];  //10*7 > 64
   uint8_t i = 0;
-  while(val >= 0x80) {  //当前字节不是最后一个字节
-    buf[i++] = (val & 0x7f) | 0x80;  
+  while (val >= 0x80) {  //当前字节不是最后一个字节
+    buf[i++] = (val & 0x7f) | 0x80;
     val >>= 7;
   }
   buf[i++] = val & 0x7f;
@@ -155,7 +150,6 @@ void ByteArray::writeFloat(float val) {
   uint32_t tmp{0};
   memcpy(&tmp, &val, sizeof(val));
   writeUInt32(tmp);
-  
 }
 
 void ByteArray::writeDouble(double val) {
@@ -189,12 +183,12 @@ void ByteArray::writeStringWithoutLen(const std::string& val) {
   write(val.c_str(), val.size());
 }
 
-#define READ(type) \
-  type tmp{};      \
-  read(&tmp, sizeof(tmp));\
-  if(m_endian == EAST_BYTE_ORDER){\
-    return tmp;\
-  }\
+#define READ(type)                   \
+  type tmp{};                        \
+  read(&tmp, sizeof(tmp));           \
+  if (m_endian == EAST_BYTE_ORDER) { \
+    return tmp;                      \
+  }                                  \
   return byteswap(tmp);
 
 int8_t ByteArray::readFixInt8() {
@@ -204,9 +198,9 @@ int8_t ByteArray::readFixInt8() {
 }
 
 uint8_t ByteArray::readFixUInt8() {
- uint8_t v{0};
- read(&v, sizeof(v));
- return v;
+  uint8_t v{0};
+  read(&v, sizeof(v));
+  return v;
 }
 
 int16_t ByteArray::readFixInt16() {
@@ -241,9 +235,9 @@ int32_t ByteArray::readInt32() {
 
 uint32_t ByteArray::readUInt32() {
   uint32_t res{0};
-  for(int i = 0; i<32; i += 7) {
+  for (int i = 0; i < 32; i += 7) {
     uint8_t byte = readFixUInt8();
-    if((byte & 0x80) != 0x80) {
+    if ((byte & 0x80) != 0x80) {
       res |= ((uint32_t)byte) << i;
       break;
     }
@@ -258,12 +252,12 @@ int64_t ByteArray::readInt64() {
 
 uint64_t ByteArray::readUInt64() {
   uint64_t res{0};
-  for(int i = 0; i<64; i += 7) {
+  for (int i = 0; i < 64; i += 7) {
     uint8_t byte = readFixUInt8();
-    if((byte & 0x80) != 0x80) {
+    if ((byte & 0x80) != 0x80) {
       res |= ((uint64_t)byte) << i;
       break;
-    }else{
+    } else {
       res |= ((uint64_t)(byte & 0x7f)) << i;
     }
   }
@@ -286,7 +280,7 @@ double ByteArray::readDouble() {
 
 std::string ByteArray::readStringFix16() {
   uint16_t len = readFixUInt16();
-  if(len == 0) {
+  if (len == 0) {
     return std::string{};
   }
   std::string str(len, ' ');
@@ -296,7 +290,7 @@ std::string ByteArray::readStringFix16() {
 
 std::string ByteArray::readStringFix32() {
   uint32_t len = readFixUInt32();
-  if(len == 0) {
+  if (len == 0) {
     return std::string{};
   }
   std::string str(len, ' ');
@@ -306,7 +300,7 @@ std::string ByteArray::readStringFix32() {
 
 std::string ByteArray::readStringFix64() {
   uint64_t len = readFixUInt64();
-  if(len == 0) {
+  if (len == 0) {
     return std::string{};
   }
   std::string str(len, ' ');
@@ -316,7 +310,7 @@ std::string ByteArray::readStringFix64() {
 
 std::string ByteArray::readStringVarint() {
   uint64_t len = readInt64();
-  if(len == 0) {
+  if (len == 0) {
     return std::string{};
   }
   std::string str(len, ' ');
@@ -329,7 +323,7 @@ void ByteArray::clear() {
   m_size = 0;
   m_capacity = m_block_size;
   Node* tmp = m_root;
-  while(tmp) {
+  while (tmp) {
     m_cur = tmp;
     tmp = tmp->next;
     delete m_cur;
@@ -339,25 +333,27 @@ void ByteArray::clear() {
 }
 
 void ByteArray::write(const void* buf, size_t size) {
-  if(size == 0) return;
+  if (size == 0)
+    return;
   addCapacity(size);  //尝试扩容，如果足够，什么也不做
-  
+
   size_t cur_offset = m_offset % m_block_size;  //当前内存块写到哪里了
   size_t cur_writeable = m_cur->size - cur_offset;  //当前内存块剩余的可写空间
   size_t buf_offset{0};
 
-  while(size > 0) {
-    if(cur_writeable >= size) {
+  while (size > 0) {
+    if (cur_writeable >= size) {
       //当前内存块剩余空间足够
       memcpy(m_cur->ptr + cur_offset, buf + buf_offset, size);
-      if(m_cur->size == (cur_offset + size)) {
+      if (m_cur->size == (cur_offset + size)) {
         m_cur = m_cur->next;
       }
       m_offset += size;
       buf_offset += size;
       break;
     }
-    memcpy(m_cur->ptr + cur_offset, buf + buf_offset, cur_writeable);  //先写这么多，剩下的放后面的节点中写
+    memcpy(m_cur->ptr + cur_offset, buf + buf_offset,
+           cur_writeable);  //先写这么多，剩下的放后面的节点中写
     m_offset += cur_writeable;
     size -= cur_writeable;
     buf_offset += cur_writeable;
@@ -365,33 +361,33 @@ void ByteArray::write(const void* buf, size_t size) {
     cur_offset = 0;
     cur_writeable = m_cur->size;
   }
-  if(m_offset > m_size) {
+  if (m_offset > m_size) {
     m_size = m_offset;
   }
 }
 
 void ByteArray::read(void* buf, size_t size) {
   //read一般从头开始读，所以使用前会改变m_offset的位置
-  if(size > getReadableSize()) {
+  if (size > getReadableSize()) {
     throw std::out_of_range("read error");
   }
 
   size_t cur_offset = m_offset % m_block_size;
   size_t cur_readable = m_cur->size - cur_offset;
   size_t buf_offset{0};
-  
-  while(size > 0) {
-    if(cur_readable >= size) {
+
+  while (size > 0) {
+    if (cur_readable >= size) {
       memcpy((char*)buf + buf_offset, m_cur->ptr + cur_offset, size);
 
       //如果正好读完，移动下当前内存指针
-      if(cur_offset + size == m_cur->size) {
+      if (cur_offset + size == m_cur->size) {
         m_cur = m_cur->next;
       }
       m_offset += size;
       buf_offset += size;
       size = 0;
-    }else{
+    } else {
       memcpy((char*)buf + buf_offset, m_cur->ptr + cur_offset, cur_readable);
       m_offset += cur_readable;
       buf_offset += cur_readable;
@@ -403,32 +399,32 @@ void ByteArray::read(void* buf, size_t size) {
   }
 }
 
-void ByteArray::read(void* buf, size_t size, size_t offset) {
-  if(size > (m_size - offset)) {
+void ByteArray::read(void* buf, size_t size, size_t offset) const {
+  if (size > (m_size - offset)) {
     throw std::out_of_range("read error");
   }
 
   size_t cur_offset = offset % m_block_size;
   size_t cur_readable = m_cur->size - cur_offset;
   size_t buf_offset{0};
-  
-  while(size > 0) {
-    if(cur_readable >= size) {
-      memcpy((char*)buf + buf_offset, m_cur->ptr + cur_offset, size);
+  Node* cur = m_cur;
+  while (size > 0) {
+    if (cur_readable >= size) {
+      memcpy((char*)buf + buf_offset, cur->ptr + cur_offset, size);
 
       //如果正好读完，移动下当前内存指针
-      if(cur_offset + size == m_cur->size) {
-        m_cur = m_cur->next;
+      if (cur_offset + size == m_cur->size) {
+        cur = cur->next;
       }
       offset += size;
       buf_offset += size;
       size = 0;
-    }else{
-      memcpy((char*)buf + buf_offset, m_cur->ptr + cur_offset, cur_readable);
+    } else {
+      memcpy((char*)buf + buf_offset, cur->ptr + cur_offset, cur_readable);
       offset += cur_readable;
       buf_offset += cur_readable;
       size -= cur_readable;
-      m_cur = m_cur->next;
+      cur = m_cur->next;
       cur_offset = 0;
       cur_readable = m_cur->size;
     }
@@ -440,28 +436,64 @@ size_t ByteArray::getOffset() const {
 }
 
 void ByteArray::setOffset(size_t offset) {
-  if(offset > m_size) {
+  if (offset > m_size) {
     throw std::out_of_range("set offset out of range");
   }
 
   m_offset = offset;
   m_cur = m_root;
-  while(offset >= m_cur->size) {
+  while (offset >= m_cur->size) {
     offset -= m_cur->size;
     m_cur = m_cur->next;
   }
 
-  if(offset == m_cur->size){
+  if (offset == m_cur->size) {
     m_cur = m_cur->next;
   }
 }
 
 bool ByteArray::writeToFile(const std::string& file_name) const {
+  std::ofstream ofs;
+  ofs.open(file_name, std::ios::trunc | std::ios::binary);
+  if (!ofs) {
+    ELOG_ERROR(g_logger) << "writeToFile, file_name = " << file_name
+                         << ", errno = " << errno
+                         << ", error str = " << strerror(errno);
+    return false;
+  }
 
+  int64_t read_size = getReadableSize();
+  int64_t offset = m_offset;
+  Node* cur = m_cur;
+
+  while (read_size > 0) {
+    int64_t cur_offset = offset % m_block_size;
+    int64_t len = (read_size + cur_offset > m_block_size ? m_block_size - offset
+                                                         : read_size);
+    ofs.write(cur->ptr + cur_offset, len);
+    cur = cur->next;
+    offset += len;
+    read_size -= len;
+  }
+  return true;
 }
 
 bool ByteArray::readFromFile(const std::string& file_name) {
+  std::ifstream ifs;
+  ifs.open(file_name, std::ios::binary);
+  if (!ifs) {
+    ELOG_ERROR(g_logger) << "readFromFile, file_name = " << file_name
+                         << ", errno = " << errno
+                         << ", str errno = " << strerror(errno);
+    return false;
+  }
 
+  std::unique_ptr<char[]> buf(new char[m_block_size]);
+  while (!ifs.eof()) {
+    ifs.read(buf.get(), m_block_size);
+    write(buf.get(), ifs.gcount());
+  }
+  return true;
 }
 
 size_t ByteArray::getBaseSize() const {
@@ -473,43 +505,78 @@ size_t ByteArray::getReadableSize() const {
 }
 
 bool ByteArray::isLittleEndian() const {
-    return m_endian;
+  return m_endian;
 }
 
 void ByteArray::setLittleEndian(bool little_endian) {
-    if(little_endian) {
-        m_endian = EAST_LITTLE_ENDIAN;
-    } else {
-        m_endian = EAST_BIG_ENDIAN;
-    }
+  if (little_endian) {
+    m_endian = EAST_LITTLE_ENDIAN;
+  } else {
+    m_endian = EAST_BIG_ENDIAN;
+  }
 }
 
 std::string ByteArray::toString() const {
+  std::string res;
+  res.resize(getReadableSize());
 
+  if (res.empty())
+    return res;
+  read(&res[0], res.size(), m_offset);
+  return res;
 }
 
 std::string ByteArray::toHexString() const {
-
+  std::string res = toString();
+  std::stringstream ss;
+  for (auto i = 0u; i < res.size(); ++i) {
+    if (i > 0 && i % 32 == 0) {
+      ss << std::endl;
+    }
+    ss << std::setw(2) << std::setfill('0') << std::hex << (int)(uint8_t)res[i]
+       << " ";
+  }
+  return ss.str();
 }
 
-uint64_t ByteArray::getReadableBuffers(std::vector<iovec>& buffers, uint64_t len, uint64_t offset) const {
-  
-}
+uint64_t ByteArray::getReadableBuffers(std::vector<iovec>& buffers,
+                                       uint64_t len, uint64_t offset) const {}
 
-uint64_t ByteArray::getWriteableBuffers(std::vector<iovec>& buffers, uint64_t len) {
+uint64_t ByteArray::getWriteableBuffers(std::vector<iovec>& buffers,
+                                        uint64_t len) {}
 
-}
-
-size_t ByteArray::getSize() const {
-
-}
+size_t ByteArray::getSize() const {}
 
 void ByteArray::addCapacity(size_t size) {
+  if (size == 0)
+    return;
+  if (size <= m_capacity)
+    return;
 
+  size_t old_cap = getCapacity();
+  int count = (size - old_cap + m_block_size - 1) / m_block_size;  //ceil
+
+  Node* tmp = m_root;
+  while (tmp->next) {
+    tmp = tmp->next;
+  }
+  Node* head{nullptr};  //用于调整m_cur
+  while (count--) {
+    tmp->next = new Node(m_block_size);
+    if (head == nullptr) {
+      head = tmp->next;
+    }
+    tmp = tmp->next;
+    m_capacity += m_block_size;
+  }
+
+  if (old_cap == 0) {
+    m_cur = head;
+  }
 }
 
 size_t ByteArray::getCapacity() const {
-
+  return m_capacity;
 }
 
-} // namespace East
+}  // namespace East
