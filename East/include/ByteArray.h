@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-12 22:12:03 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-12 23:11:10
+ * @Last Modified time: 2025-05-18 16:19:07
  */
 
 #include <arpa/inet.h>
@@ -122,7 +122,7 @@ class ByteArray {
  private:
   void addCapacity(size_t size);  //扩容，如果容量足够，什么也不做
 
-  size_t getCapacity() const;  //返回当前的可写入容量
+  size_t getWriteableCapacity() const;  //返回当前的可写入容量
 
  private:
   size_t m_block_size{0};  //内存块的大小

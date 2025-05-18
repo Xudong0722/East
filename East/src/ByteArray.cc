@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-12 22:12:30 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-12 23:10:51
+ * @Last Modified time: 2025-05-18 16:56:23
  */
 
 #include "ByteArray.h"
@@ -344,7 +344,8 @@ void ByteArray::write(const void* buf, size_t size) {
   while (size > 0) {
     if (cur_writeable >= size) {
       //当前内存块剩余空间足够
-      memcpy(m_cur->ptr + cur_offset, (const char*)buf + buf_offset, size);
+      memcpy((char*)m_cur->ptr + cur_offset, (const char*)buf + buf_offset,
+             size);
       if (m_cur->size == (cur_offset + size)) {
         m_cur = m_cur->next;
       }
@@ -352,7 +353,7 @@ void ByteArray::write(const void* buf, size_t size) {
       buf_offset += size;
       break;
     }
-    memcpy(m_cur->ptr + cur_offset, (const char*)buf + buf_offset,
+    memcpy((char*)m_cur->ptr + cur_offset, (const char*)buf + buf_offset,
            cur_writeable);  //先写这么多，剩下的放后面的节点中写
     m_offset += cur_writeable;
     size -= cur_writeable;
@@ -413,7 +414,7 @@ void ByteArray::read(void* buf, size_t size, size_t offset) const {
       memcpy((char*)buf + buf_offset, cur->ptr + cur_offset, size);
 
       //如果正好读完，移动下当前内存指针
-      if (cur_offset + size == m_cur->size) {
+      if ((cur_offset + size) == cur->size) {
         cur = cur->next;
       }
       offset += size;
@@ -424,9 +425,9 @@ void ByteArray::read(void* buf, size_t size, size_t offset) const {
       offset += cur_readable;
       buf_offset += cur_readable;
       size -= cur_readable;
-      cur = m_cur->next;
+      cur = cur->next;
       cur_offset = 0;
-      cur_readable = m_cur->size;
+      cur_readable = cur->size;
     }
   }
 }
@@ -456,7 +457,7 @@ bool ByteArray::writeToFile(const std::string& file_name) const {
   std::ofstream ofs;
   ofs.open(file_name, std::ios::trunc | std::ios::binary);
   if (!ofs) {
-    ELOG_ERROR(g_logger) << "writeToFile, file_name = " << file_name
+    ELOG_ERROR(g_logger) << ", file_name = " << file_name
                          << ", errno = " << errno
                          << ", error str = " << strerror(errno);
     return false;
@@ -468,9 +469,9 @@ bool ByteArray::writeToFile(const std::string& file_name) const {
 
   while (read_size > 0) {
     int64_t cur_offset = offset % m_block_size;
-    int64_t len =
-        (read_size + cur_offset > (int64_t)m_block_size ? m_block_size - offset
-                                                        : read_size);
+    int64_t len = (read_size + cur_offset > (int64_t)m_block_size
+                       ? m_block_size - cur_offset
+                       : read_size);
     ofs.write(cur->ptr + cur_offset, len);
     cur = cur->next;
     offset += len;
@@ -621,10 +622,12 @@ size_t ByteArray::getSize() const {
 void ByteArray::addCapacity(size_t size) {
   if (size == 0)
     return;
-  if (size <= m_capacity)
-    return;
 
-  size_t old_cap = getCapacity();
+  size_t old_cap = getWriteableCapacity();
+  if (old_cap >= size) {
+    return;
+  }
+
   int count = (size - old_cap + m_block_size - 1) / m_block_size;  //ceil
 
   Node* tmp = m_root;
@@ -646,8 +649,8 @@ void ByteArray::addCapacity(size_t size) {
   }
 }
 
-size_t ByteArray::getCapacity() const {
-  return m_capacity;
+size_t ByteArray::getWriteableCapacity() const {
+  return m_capacity - m_offset;  //总容量减去当前的偏移量就是剩下可写的空间
 }
 
 }  // namespace East
