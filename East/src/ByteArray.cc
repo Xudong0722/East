@@ -344,7 +344,7 @@ void ByteArray::write(const void* buf, size_t size) {
   while (size > 0) {
     if (cur_writeable >= size) {
       //当前内存块剩余空间足够
-      memcpy(m_cur->ptr + cur_offset, buf + buf_offset, size);
+      memcpy(m_cur->ptr + cur_offset, (const char*)buf + buf_offset, size);
       if (m_cur->size == (cur_offset + size)) {
         m_cur = m_cur->next;
       }
@@ -352,7 +352,7 @@ void ByteArray::write(const void* buf, size_t size) {
       buf_offset += size;
       break;
     }
-    memcpy(m_cur->ptr + cur_offset, buf + buf_offset,
+    memcpy(m_cur->ptr + cur_offset, (const char*)buf + buf_offset,
            cur_writeable);  //先写这么多，剩下的放后面的节点中写
     m_offset += cur_writeable;
     size -= cur_writeable;
@@ -468,8 +468,9 @@ bool ByteArray::writeToFile(const std::string& file_name) const {
 
   while (read_size > 0) {
     int64_t cur_offset = offset % m_block_size;
-    int64_t len = (read_size + cur_offset > m_block_size ? m_block_size - offset
-                                                         : read_size);
+    int64_t len =
+        (read_size + cur_offset > (int64_t)m_block_size ? m_block_size - offset
+                                                        : read_size);
     ofs.write(cur->ptr + cur_offset, len);
     cur = cur->next;
     offset += len;
@@ -540,12 +541,82 @@ std::string ByteArray::toHexString() const {
 }
 
 uint64_t ByteArray::getReadableBuffers(std::vector<iovec>& buffers,
-                                       uint64_t len, uint64_t offset) const {}
+                                       uint64_t len) const {
+  len = len > getReadableSize() ? getReadableSize() : len;
+  if (len == 0u)
+    return 0;
+
+  uint64_t real_size = len;
+  uint64_t cur_offset = m_offset % m_block_size;
+  uint64_t cur_readable = m_cur->size - cur_offset;
+  Node* cur = m_cur;
+  struct iovec iov;
+
+  while (len > 0) {
+    if (cur_readable >= len) {
+      //当前这个节点已经可以放下了，直接放这里面就可以了
+      iov.iov_base = cur->ptr + cur_offset;
+      iov.iov_len = len;
+      len = 0;
+    } else {
+      //把当前节点放满，然后移动到下一个节点
+      iov.iov_base = cur->ptr + cur_offset;
+      iov.iov_len = cur_readable;
+      len -= cur_readable;
+      cur = cur->next;
+      cur_offset = 0;
+      cur_readable = cur->size;
+    }
+    buffers.emplace_back(std::move(iov));
+  }
+  return real_size;
+}
+
+uint64_t ByteArray::getReadableBuffers(std::vector<iovec>& buffers,
+                                       uint64_t len, uint64_t offset) const {
+  len = len > getReadableSize() ? getReadableSize() : len;
+  if (len == 0u)
+    return 0;
+
+  uint64_t real_size = len;
+  uint64_t cur_offset = offset % m_block_size;
+  //找到对应的当前节点
+  Node* cur = m_root;
+  size_t count = offset / m_block_size;
+  while (count--) {
+    cur = cur->next;
+  }
+  uint64_t cur_readable = cur->size - cur_offset;
+  struct iovec iov;
+
+  while (len > 0) {
+    if (cur_readable >= len) {
+      //当前这个节点已经可以放下了，直接放这里面就可以了
+      iov.iov_base = cur->ptr + cur_offset;
+      iov.iov_len = len;
+      len = 0;
+    } else {
+      //把当前节点放满，然后移动到下一个节点
+      iov.iov_base = cur->ptr + cur_offset;
+      iov.iov_len = cur_readable;
+      len -= cur_readable;
+      cur = cur->next;
+      cur_offset = 0;
+      cur_readable = cur->size;
+    }
+    buffers.emplace_back(std::move(iov));
+  }
+  return real_size;
+}
 
 uint64_t ByteArray::getWriteableBuffers(std::vector<iovec>& buffers,
-                                        uint64_t len) {}
+                                        uint64_t len) {
+  return 0;
+}
 
-size_t ByteArray::getSize() const {}
+size_t ByteArray::getSize() const {
+  return m_size;
+}
 
 void ByteArray::addCapacity(size_t size) {
   if (size == 0)

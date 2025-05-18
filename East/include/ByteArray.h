@@ -110,6 +110,8 @@ class ByteArray {
 
   std::string toHexString() const;  //十六进制字符串
 
+  uint64_t getReadableBuffers(std::vector<iovec>& buffers,
+                              uint64_t len = ~0ull) const;
   uint64_t getReadableBuffers(std::vector<iovec>& buffers, uint64_t len,
                               uint64_t offset) const;
 
