@@ -9,10 +9,29 @@ endif()
 
 find_library(PTHREAD pthread)
 # set(CMAKE_VERBOSE_MAKEFILE ON)
-# set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function")
+# set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O3 -g -std=c++17 -W  all -Wno-deprecated -Werror -Wno-unused-function")
 set(LIBRARY_NAME East)
 
-aux_source_directory(src DIR_LIB_SRCS)
+# aux_source_directory(src DIR_LIB_SRCS)
+set(DIR_LIB_SRCS 
+    src/Address.cc
+    src/ByteArray.cc 
+    src/Config.cc 
+    src/FdManager.cc 
+    src/Fiber.cc 
+    src/Hook.cc 
+    src/IOManager.cc 
+    src/LogAppender.cc 
+    src/LogEvent.cc 
+    src/LogFormatter.cc 
+    src/Logger.cc 
+    src/Mutex.cc 
+    src/Scheduler.cc 
+    src/Socket.cc 
+    src/Thread.cc 
+    src/Timer.cc 
+    src/util.cc 
+    http/Http.cc)
 #file(GLOB_RECURSE SRC_FILES "src/*.cc")
 
 
