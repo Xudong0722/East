@@ -8,7 +8,7 @@
 #include "../East/http/Http.h"
 #include "../East/include/Elog.h"
 
-void test() {
+void test_req() {
   East::Http::HttpReq::sptr req = std::make_shared<East::Http::HttpReq>();
   req->setHeader("host", "www.baidu.com");
   req->setBody("hello world");
@@ -16,7 +16,16 @@ void test() {
   req->dump(std::cout) << std::endl;
 }
 
+void test_resp() {
+  East::Http::HttpResp::sptr resp = std::make_shared<East::Http::HttpResp>();
+  resp->setHeader("X-X", "www.baidu.com");
+  resp->setBody("hello world");
+  resp->setClose(false);
+  resp->setStatus(East::Http::HttpStatus::OK);
+  resp->dump(std::cout) << std::endl;
+}
 int main() {
-  test();
+  test_req();
+  test_resp();
   return 0;
 }
