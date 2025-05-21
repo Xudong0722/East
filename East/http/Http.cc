@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-19 17:18:43 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-19 18:20:14
+ * @Last Modified time: 2025-05-21 23:37:27
  */
 
 #include "Http.h"
@@ -58,7 +58,8 @@ bool CaseInsensitiveLess::operator()(const std::string& lhs, const std::string& 
 
 HttpReq::HttpReq(uint8_t version, bool close) 
   : m_version(version)
-  , m_close(close){
+  , m_close(close)
+  , m_path("/") {
 
 }
 
@@ -168,6 +169,54 @@ std::ostream&  HttpReq::dump(std::ostream& os) {
     os << "\r\n";
   }
   return os;
+}
+
+HttpResp::HttpResp(uint8_t version, bool close)
+ : m_version(version)
+ , m_close(close) {
+
+}
+
+std::string HttpResp::getHeader(const std::string& key, const std::string& def) {
+  auto it = m_headers.find(key);
+  if(it == m_headers.end()) {
+    return def;
+  }
+  return it->second; 
+}
+
+void HttpResp::setHeader(const std::string& key, const std::string& val) {
+  m_headers[key] = val;
+}
+
+void HttpResp::delHeader(const std::string& key) {
+  m_headers.erase(key);
+}
+
+std::ostream& HttpResp::dump(std::ostream& os) {
+  os << "HTTP/"
+     << (uint32_t)(m_version >> 4)
+     <<"."
+     << (uint32_t)(m_version & 0x0F)
+     << " "
+     << (uint32_t)m_status
+     << " "
+     << (m_reason.empty() ? HttpStatusToString(m_status) : m_reason)
+     << "\r\n";
+
+    for(const auto& item : m_headers) {
+      if(strcasecmp(item.first.c_str(), "connection") == 0) continue;
+      os << item.first << ":" << item.second << "\r\n";
+    }
+
+    os << "connnection: " << (m_close ? "close" : "keep-alive") << "\r\n";
+    if(!m_body.empty()) {
+      os << "content-length: " << m_body.size() << "\r\n\r\n"
+        << m_body;
+    }else{
+      os << "\r\n";
+    }
+    return os;
 }
 
 } //namespace Http

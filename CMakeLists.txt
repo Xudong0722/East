@@ -76,5 +76,8 @@ target_link_libraries(test_socket "${LIBS}")
 add_executable(test_bytearray tests/test_bytearray.cc)
 target_link_libraries(test_bytearray "${LIBS}")
 
+add_executable(test_http tests/test_http.cc)
+target_link_libraries(test_http "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

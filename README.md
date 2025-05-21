@@ -406,3 +406,17 @@ ByteArray是我们用于字节流转换的类，它支持：
 - 支持上述类型的读取
 - 支持写入文件，从文件中读取字节流
 - 使用链表存储字节流，自动扩容
+
+
+## Http模块
+
+HttpReq
+
+
+HttpResp:
+
+HTTP/1.1 200 OK
+Pragma: no-cache
+Content-Type: text/html
+Content-Length: 14988
+Connection: close
