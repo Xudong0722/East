@@ -2,9 +2,10 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-19 14:08:39 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-19 18:31:42
+ * @Last Modified time: 2025-05-23 00:13:11
  */
 
+#pragma once
 #include <string>
 #include <map>
 #include <vector>
@@ -274,7 +275,7 @@ private:
   MapType m_headers;
   MapType m_params;
   MapType m_cookie;
-};
+}; //HttpReq
 
 class HttpResp {
 public:
@@ -353,6 +354,7 @@ private:
   std::string m_body;
   std::string m_reason;
   MapType m_headers;
-};
+}; //class HttpResp
+
 } // namespace Http
 } // namespace East

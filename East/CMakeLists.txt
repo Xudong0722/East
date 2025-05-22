@@ -31,7 +31,10 @@ set(DIR_LIB_SRCS
     src/Thread.cc 
     src/Timer.cc 
     src/util.cc 
-    http/Http.cc)
+    http/Http.cc
+    http/http11_parser.rl.cc 
+    http/httpclient_parser.rl.cc
+    http/HttpParser.cc)
 #file(GLOB_RECURSE SRC_FILES "src/*.cc")
 
 
