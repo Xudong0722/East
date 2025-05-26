@@ -19,13 +19,23 @@ public:
   using sptr = std::shared_ptr<HttpReqParser>;
   HttpReqParser();
 
-  size_t execute(const char* data, size_t len, size_t off);
-  int isFinished() const;
-  int hasError() const;
+  size_t execute(char* data, size_t len);
+  int isFinished();
+  int hasError();
+
+  HttpReq::sptr getData() const { return m_req; }
+  void setError(int v) { m_error = v; }
+
 private:
   HttpReq::sptr m_req;
   http_parser m_parser;
   int m_error {0};
+  /*
+  error code:
+  1000: Invalid HTTP method
+  1001: Invalid HTTP version
+  1002: Invalid HTTP field length
+  */
 }; //class HttpReqParser
 
 class HttpRespParser {
@@ -33,8 +43,8 @@ public:
   using sptr = std::shared_ptr<HttpRespParser>;
   HttpRespParser();
   size_t execute(const char* data, size_t len, size_t off);
-  int isFinished() const;
-  int hasError() const;
+  int isFinished();
+  int hasError();
 private:
   httpclient_parser m_parser;
   HttpResp::sptr m_resp;
