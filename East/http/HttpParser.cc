@@ -108,16 +108,16 @@ HttpReqParser::HttpReqParser() {
   m_parser.data = this;
 }
 
+/*
+return value:
+1:  解析完毕
+-1: 解析出错
+>0: 还没有解析完，返回值为已经解析的字节数
+*/
 size_t HttpReqParser::execute(char* data, size_t len) {
   size_t n = http_parser_execute(&m_parser, data, len, 0);
-  if(n ==  -1) {
-    //解析出错
-    ELOG_WARN(g_logger) << "Invlid request: " << std::string(data, len);
-  }else if(n != 1) {
-    //还没有解析完
-    //TODO
-  }
-  return 0;
+  memmove(data, data + n, (len - n));
+  return n;
 }
 
 int HttpReqParser::isFinished() {
@@ -169,7 +169,7 @@ HttpRespParser::HttpRespParser() {
   m_parser.data = this;
 }
 
-size_t HttpRespParser::execute(const char* data, size_t len, size_t off) {
+size_t HttpRespParser::execute(char* data, size_t len) {
   return 0;
 }
 
