@@ -121,6 +121,7 @@ return value:
 */
 size_t HttpReqParser::execute(char* data, size_t len) {
   size_t n = http_parser_execute(&m_parser, data, len, 0);
+  //这里只会处理header，所以剩下的就是body，将body移动到前面，len-n就是body的长度
   memmove(data, data + n, (len - n));
   return n;
 }
