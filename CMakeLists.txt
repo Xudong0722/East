@@ -79,5 +79,8 @@ target_link_libraries(test_bytearray "${LIBS}")
 add_executable(test_http tests/test_http.cc)
 target_link_libraries(test_http "${LIBS}")
 
+add_executable(test_http_parser tests/test_http_parser.cc)
+target_link_libraries(test_http_parser "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

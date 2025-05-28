@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:14:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-23 00:32:43
+ * @Last Modified time: 2025-05-28 22:30:55
  */
 
 #include "HttpParser.h"
@@ -38,7 +38,9 @@ struct _RequestSizeIniter {
 
 void on_request_method(void* data, const char* at, size_t length) {
   HttpReqParser* parser = static_cast<HttpReqParser*>(data);
-  HttpMethod method = CharsToHttpMethod(at);
+  if(nullptr == parser) return;
+  
+  HttpMethod method = CharsToHttpMethod(std::string(at, length).c_str());
 
   if(method == HttpMethod::INVALID) {
     ELOG_WARN(g_logger) << "Invalid HTTP method: " << std::string(at, length);
@@ -48,26 +50,29 @@ void on_request_method(void* data, const char* at, size_t length) {
 }
 
 void on_request_uri(void* data, const char* at, size_t length) {
-  //HttpReqParser* parser = static_cast<HttpReqParser*>(data);
 }
 
 void on_request_fragment(void* data, const char* at, size_t length) {
   HttpReqParser* parser = static_cast<HttpReqParser*>(data);
+  if(nullptr == parser) return;
   parser->getData()->setFragment(std::string(at, length));
 }
 
 void on_request_path(void* data, const char* at, size_t length) {
   HttpReqParser* parser = static_cast<HttpReqParser*>(data);
+  if(nullptr == parser) return;
   parser->getData()->setPath(std::string(at, length));
 }
 
 void on_request_query(void* data, const char* at, size_t length) {
   HttpReqParser* parser = static_cast<HttpReqParser*>(data);
+  if(nullptr == parser) return;
   parser->getData()->setQuery(std::string(at, length));
 }
 
 void on_request_version(void* data, const char* at, size_t length) {
   HttpReqParser* parser = static_cast<HttpReqParser*>(data);
+  if(nullptr == parser) return;
   uint8_t v{0};
   if(strncmp(at, "HTTP/1.1", length) == 0) {
     v = 0x11;
@@ -82,11 +87,11 @@ void on_request_version(void* data, const char* at, size_t length) {
 }
 
 void on_request_header_done(void* data, const char* at, size_t length) {
-  //HttpReqParser* parser = static_cast<HttpReqParser*>(data);
 }
 
 void on_request_http_field(void* data, const char* field, size_t flen, const char* value, size_t vlen) {
   HttpReqParser* parser = static_cast<HttpReqParser*>(data);
+  if(nullptr == parser) return;
   if(flen == 0) {
     ELOG_WARN(g_logger) << "Invalid http request field lenght == 0";
     parser->setError(1002); // Invalid field error code
@@ -128,32 +133,55 @@ int HttpReqParser::hasError() {
   return m_error && http_parser_has_error(&m_parser);
 }
 
+uint64_t HttpReqParser::getContentLength() {
+  return m_req->getHeaderAs<uint64_t>("content-length", 0);
+}
+
 void on_response_reason_phrase(void* data, const char* at, size_t length) {
-    
+  HttpRespParser* parser = static_cast<HttpRespParser*>(data);
+  if(nullptr == parser) return;
+  parser->getData()->setReason(std::string(at, length));
 }
 
 void on_response_status_code(void* data, const char* at, size_t length) {
-    
+  HttpRespParser* parser = static_cast<HttpRespParser*>(data);
+  if(nullptr == parser) return;
+  parser->getData()->setStatus(static_cast<HttpStatus>(atoi(at)));
 }
 
 void on_response_chunk_size(void* data, const char* at, size_t length) {
-    
 }
 
 void on_response_version(void* data, const char* at, size_t length) {
-    
+  HttpRespParser* parser = static_cast<HttpRespParser*>(data);
+  if(nullptr == parser) return;
+
+  uint8_t version{0};
+  if(strncasecmp(at, "HTTP/1.1", length) == 0) {
+    version = 0x11;
+  }else if(strncasecmp(at, "HTTP/1.0", length) == 0) {
+    version = 0x10;
+  }else{
+    ELOG_WARN(g_logger) << "Invalid HTTP version: " << std::string(at, length);
+    parser->setError(1001); // Invalid HTTP version error code
+    return ;
+  }
+  parser->getData()->setVersion(version);
 }
 
 void on_response_header_done(void* data, const char* at, size_t length) {
-    
 }
 
 void on_response_last_chunk(void* data, const char* at, size_t length) {
-    
 }
 
 void on_response_http_field(void* data, const char* field, size_t flen, const char* value, size_t vlen) {
-    
+  HttpRespParser* parser = static_cast<HttpRespParser*>(data);
+  if(flen == 0) {
+    ELOG_WARN(g_logger) << "Invalid http request field lenght == 0";
+    parser->setError(1002); // Invalid field error code
+  }
+  parser->getData()->setHeader(std::string(field, flen), std::string(value, vlen));
 }
 
 HttpRespParser::HttpRespParser() {
@@ -170,7 +198,9 @@ HttpRespParser::HttpRespParser() {
 }
 
 size_t HttpRespParser::execute(char* data, size_t len) {
-  return 0;
+  size_t n = httpclient_parser_execute(&m_parser, data, len, 0);
+  memmove(data, data + n, (len - n));
+  return n;
 }
 
 int HttpRespParser::isFinished() {
@@ -179,6 +209,10 @@ int HttpRespParser::isFinished() {
 
 int HttpRespParser::hasError() {
   return m_error && httpclient_parser_has_error(&m_parser);
+}
+
+uint64_t HttpRespParser::getContentLength() {
+  return m_resp->getHeaderAs<uint64_t>("content-length", 0);
 }
 } //namespace Http
 } //namespace East

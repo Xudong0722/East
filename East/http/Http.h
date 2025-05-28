@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-19 14:08:39 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-23 00:13:11
+ * @Last Modified time: 2025-05-28 22:41:13
  */
 
 #pragma once
@@ -227,7 +227,8 @@ public:
     return getAs(m_cookie, key, def);
   }
 
-  std::ostream& dump(std::ostream& os);
+  std::ostream& dump(std::ostream& os) const;
+  std::string toString() const;
 private:
   //获取m中key对应的val，并尝试将其转换为T类型，返回是否成功
   template<class T>
@@ -313,7 +314,8 @@ public:
     return getAs(m_headers, key, def);
   }
 
-  std::ostream& dump(std::ostream& os);
+  std::ostream& dump(std::ostream& os) const;
+  std::string toString() const;
 private:
   template<class T>
   bool checkGetAs(const MapType& m, const std::string& key, T& val, const T& def = T{}) {

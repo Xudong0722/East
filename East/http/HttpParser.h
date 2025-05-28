@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:13:02 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-23 00:28:55
+ * @Last Modified time: 2025-05-28 22:36:26
  */
 
 #pragma once
@@ -25,7 +25,8 @@ public:
 
   HttpReq::sptr getData() const { return m_req; }
   void setError(int v) { m_error = v; }
-
+  uint64_t getContentLength();
+  
 private:
   HttpReq::sptr m_req;
   http_parser m_parser;
@@ -45,9 +46,19 @@ public:
   size_t execute(char* data, size_t len);
   int isFinished();
   int hasError();
+
+  HttpResp::sptr getData() const { return m_resp; }
+  void setError(int v) { m_error = v; }
+  uint64_t getContentLength();
+  
 private:
   httpclient_parser m_parser;
   HttpResp::sptr m_resp;
+  /*
+  error code:
+  1001: Invalid HTTP version
+  1002: Invalid HTTP field length
+  */
   int m_error{0};
 };  //class HttpRespParser
 } //namespace Http

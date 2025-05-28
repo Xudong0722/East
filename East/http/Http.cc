@@ -2,11 +2,11 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-19 17:18:43 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-21 23:37:27
+ * @Last Modified time: 2025-05-28 22:31:04
  */
 
 #include "Http.h"
-
+#include <iostream>
 namespace East {
 namespace Http {
   
@@ -144,7 +144,7 @@ bool HttpReq::hasCookie(const std::string& key, std::string* val) {
   return true;
 }
 
-std::ostream&  HttpReq::dump(std::ostream& os) {
+std::ostream&  HttpReq::dump(std::ostream& os) const {
   os << HttpMethodToString(m_method) << " "
      << m_path 
      << (m_query.empty() ? "" : "?")
@@ -171,6 +171,12 @@ std::ostream&  HttpReq::dump(std::ostream& os) {
   return os;
 }
 
+std::string HttpReq::toString() const {
+  std::stringstream ss;
+  dump(ss);
+  return ss.str();
+}
+
 HttpResp::HttpResp(uint8_t version, bool close)
  : m_version(version)
  , m_close(close) {
@@ -193,7 +199,7 @@ void HttpResp::delHeader(const std::string& key) {
   m_headers.erase(key);
 }
 
-std::ostream& HttpResp::dump(std::ostream& os) {
+std::ostream& HttpResp::dump(std::ostream& os) const {
   os << "HTTP/"
      << (uint32_t)(m_version >> 4)
      <<"."
@@ -217,6 +223,12 @@ std::ostream& HttpResp::dump(std::ostream& os) {
       os << "\r\n";
     }
     return os;
+}
+
+std::string HttpResp::toString() const {
+  std::stringstream ss;
+  dump(ss);
+  return ss.str();
 }
 
 } //namespace Http
