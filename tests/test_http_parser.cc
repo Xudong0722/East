@@ -52,7 +52,7 @@ void test_response() {
   East::Http::HttpRespParser parser;
   std::string tmp = test_response_data;
   size_t s = parser.execute(&tmp[0], tmp.size());
-  
+
   ELOG_INFO(g_logger) << "execute rt: " << s
                       << " has error: " << parser.hasError()
                       << " is finished: " << parser.isFinished()
