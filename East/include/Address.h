@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-14 18:46:44 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-19 18:26:57
+ * @Last Modified time: 2025-06-06 15:36:40
  */
 
 #pragma once
@@ -49,7 +49,7 @@ class Address {
   virtual socklen_t getAddrLen() const = 0;
 
   virtual std::ostream& dump(std::ostream& os) const = 0;
-  std::string toString();
+  std::string toString() const;
 
   bool operator<(const Address& rhs) const;
   bool operator==(const Address& rhs) const;
@@ -149,4 +149,6 @@ class UnknownAddress : public Address {
  private:
   sockaddr m_addr;
 };
+
+std::ostream& operator<<(std::ostream& os, const Address& addr);
 }  // namespace East

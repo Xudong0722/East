@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-04-14 18:46:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-11 18:44:09
+ * @Last Modified time: 2025-06-06 15:40:57
  */
 
 #include "Address.h"
@@ -219,7 +219,7 @@ int Address::getFamily() const {
   return getAddr()->sa_family;
 }
 
-std::string Address::toString() {
+std::string Address::toString() const {
   std::stringstream ss;
   dump(ss);
   return ss.str();
@@ -539,5 +539,9 @@ socklen_t UnknownAddress::getAddrLen() const {
 std::ostream& UnknownAddress::dump(std::ostream& os) const {
   os << "[UnknownAddress: family=" << m_addr.sa_family << "]";
   return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Address& addr) {
+  return addr.dump(os);
 }
 }  // namespace East
