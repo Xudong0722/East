@@ -5,6 +5,7 @@
  * @Last Modified time: 2025-04-07 14:16:16
  */
 
+#pragma once
 #include "Scheduler.h"
 #include "Timer.h"
 

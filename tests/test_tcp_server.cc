@@ -6,15 +6,23 @@
  */
 
 #include "../East/include/TcpServer.h"
-#include "../East/include/IOManager.h"
 #include "../East/include/Elog.h"
 
 East::Logger::sptr g_logger = ELOG_ROOT();
 
 void run() {
-    auto addr = East::Address::LookupAny("0.0.0.0");
-    ELOG_INFO(g_logger) << *addr;
+    auto addr = East::Address::LookupAny("0.0.0.0:80");
+    auto addr2 = std::make_shared<East::UnixAddress>("/tmp/unix_addr");
+    ELOG_INFO(g_logger) << *addr << " - " << *addr2;
+    std::vector<East::Address::sptr> addrs{addr, addr2};
+    East::TcpServer::sptr tcp_server = std::make_shared<East::TcpServer>();
 
+    std::vector<East::Address::sptr> fails;
+    while(!tcp_server->bind(addrs, fails)) {
+        sleep(2);
+    }
+
+    tcp_server->start();
 }
 
 int main() {

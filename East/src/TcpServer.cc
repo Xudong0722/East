@@ -39,14 +39,12 @@ bool TcpServer::bind(East::Address::sptr addr) {
 
 bool TcpServer::bind(const std::vector<Address::sptr>& addrs,
                      std::vector<Address::sptr>& fails) {
-  bool rt = true;
   for (auto& addr : addrs) {
     Socket::sptr sock = Socket::CreateTCP(addr);
     if (!sock->bind(addr)) {
       ELOG_ERROR(g_logger) << "bind fail errno: " << errno
                            << " strerror: " << strerror(errno) << " addr:[ "
                            << addr->toString() << "]";
-      rt = false;
       fails.emplace_back(addr);
       continue;
     }
@@ -54,7 +52,6 @@ bool TcpServer::bind(const std::vector<Address::sptr>& addrs,
       ELOG_ERROR(g_logger) << "listen fail errno: " << errno
                            << " strerror: " << strerror(errno) << " addr:[ "
                            << addr->toString() << "]";
-      rt = false;
       fails.emplace_back(addr);
       continue;
     }

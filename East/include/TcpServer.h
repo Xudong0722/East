@@ -20,7 +20,7 @@ class TcpServer : public std::enable_shared_from_this<TcpServer>,
   using sptr = std::shared_ptr<TcpServer>;
   TcpServer(East::IOManager* worker = East::IOManager::GetThis(),
             East::IOManager* accept_worker = East::IOManager::GetThis());
-  virtual ~TcpServer() {}
+  virtual ~TcpServer();
 
   virtual bool bind(East::Address::sptr addr);
   virtual bool bind(const std::vector<Address::sptr>& addrs,

@@ -4,6 +4,7 @@
  * @Last Modified by: Xudong0722
  * @Last Modified time: 2025-04-10 00:31:35
  */
+#pragma once
 
 #include "Noncopyable.h"
 #include "Thread.h"
