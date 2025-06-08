@@ -37,7 +37,7 @@ void hook_init() {
 //从下一个动态库（通常是 libc）中查找 "sleep" 函数的地址（避开当前这个hook）把结果赋给 sleep_f
 #define hook(name) name##_f = (name##_func)dlsym(RTLD_NEXT, #name);
   HOOK_FUNC(hook)
-#undef hook
+#undef hook 
 }
 
 static uint64_t s_connect_timeout = -1;
