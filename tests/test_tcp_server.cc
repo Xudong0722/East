@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-06 15:01:50 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-08 21:55:17
+ * @Last Modified time: 2025-06-08 22:09:14
  */
 
 #include "../East/include/TcpServer.h"
@@ -25,8 +25,9 @@ void run() {
     tcp_server->start();
 }
 
-int main() {
-    East::IOManager iom(1);
+int main(int argc, char** argv) {
+
+    East::IOManager iom(2);
     iom.schedule(run);
     return 0;
 }

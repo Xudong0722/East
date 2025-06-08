@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-12 22:12:30 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-18 16:56:23
+ * @Last Modified time: 2025-06-08 22:13:49
  */
 
 #include "ByteArray.h"
@@ -612,7 +612,30 @@ uint64_t ByteArray::getReadableBuffers(std::vector<iovec>& buffers,
 
 uint64_t ByteArray::getWriteableBuffers(std::vector<iovec>& buffers,
                                         uint64_t len) {
-  return 0;
+  if(len == 0) return 0;
+  addCapacity(len);
+  uint64_t size = len;
+  size_t npos = m_offset % m_block_size;
+  size_t ncap = m_cur->size - npos;
+  struct iovec iov;
+  Node* cur = m_cur;
+  while(len > 0) {
+    if(ncap >= len) {
+      iov.iov_base = cur->ptr + npos;
+      iov.iov_len = len;
+      len = 0;
+    }else {
+      iov.iov_base = cur->ptr + npos;
+      iov.iov_len = ncap;
+
+      len -= ncap;
+      cur = cur->next;
+      npos = 0;
+      ncap = m_cur->size - npos;
+    }
+    buffers.emplace_back(iov);
+  }
+  return size;
 }
 
 size_t ByteArray::getSize() const {
