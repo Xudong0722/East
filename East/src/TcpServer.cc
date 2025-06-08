@@ -101,8 +101,9 @@ void TcpServer::startAccept(Socket::sptr sock) {
   while (!m_isStop) {
     Socket::sptr client = sock->accept();
     if (client) {
+      client->setRecvTimeout(m_readTimeout); 
       m_worker->schedule(
-          std::bind(&TcpServer::handleClient, shared_from_this(), sock));
+          std::bind(&TcpServer::handleClient, shared_from_this(), client));
     } else {
       ELOG_ERROR(g_logger) << "Accept error: " << errno
                            << " strerrno: " << strerror(errno);
