@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-12 22:12:30 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-08 22:13:49
+ * @Last Modified time: 2025-06-08 23:12:07
  */
 
 #include "ByteArray.h"
@@ -319,10 +319,11 @@ std::string ByteArray::readStringVarint() {
 }
 
 void ByteArray::clear() {
+  //只保留根节点
   m_offset = 0;
   m_size = 0;
   m_capacity = m_block_size;
-  Node* tmp = m_root;
+  Node* tmp = m_root->next;
   while (tmp) {
     m_cur = tmp;
     tmp = tmp->next;
@@ -437,11 +438,14 @@ size_t ByteArray::getOffset() const {
 }
 
 void ByteArray::setOffset(size_t offset) {
-  if (offset > m_size) {
+  if (offset > m_capacity) {
     throw std::out_of_range("set offset out of range");
   }
 
   m_offset = offset;
+  if(m_offset > m_size) {
+    m_size = m_offset;
+  }
   m_cur = m_root;
   while (offset >= m_cur->size) {
     offset -= m_cur->size;

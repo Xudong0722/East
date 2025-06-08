@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-08 21:54:47 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-08 22:16:41
+ * @Last Modified time: 2025-06-08 23:14:02
  */
 
 #include "../East/include/TcpServer.h"
@@ -30,8 +30,10 @@ void EchoServer::handleClient(East::Socket::sptr client) {
         ba->clear();
         std::vector<iovec> iovs;
         ba->getWriteableBuffers(iovs, 1024);
-
+        
         int rt = client->recv(&iovs[0], iovs.size());
+        //char* buf  = new char[2048];
+        //int rt = client->recv((void*)buf, 2048);
         if(rt == 0) {
             ELOG_INFO(g_logger) << "client close." << *client;
             return ;
@@ -40,13 +42,20 @@ void EchoServer::handleClient(East::Socket::sptr client) {
               << " errno: " << errno << " strerrno: " << strerror(errno);
             break;
         }
-
+        ba->setOffset(ba->getOffset() + rt);
         ba->setOffset(0);
+        std::string data;
         if(m_type == 1) {
-            std::cout << ba->toString() << std::endl;   //text format
+            data = ba->toString();
+            std::cout << data << std::endl;   //text format
         }else if(m_type == 2) {
-            std::cout << ba->toHexString() << std::endl;  //binary format
+            data = ba->toHexString();
+            std::cout << data << std::endl;  //binary format
         }
+        
+        int st = client->send(data.c_str(), data.size());
+        ELOG_INFO(g_logger) << st;
+        
     }
 }
 
