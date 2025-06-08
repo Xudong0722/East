@@ -71,9 +71,9 @@ void test_sock() {
 }
 
 int main() {
-  //test_sleep();
-  East::IOManager io_mgr;
-  io_mgr.schedule(test_sock);
+  test_sleep();
+  //East::IOManager io_mgr;
+  //io_mgr.schedule(test_sock);
   //test_sock();
   return 0;
 }

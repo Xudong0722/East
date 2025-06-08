@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.22)
 project(East VERSION 1.0)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function -ldl -lpthread")
+set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -fPIC -rdynamic -g -std=c++17 -Wall -Wno-deprecated -Werror -Wno-unused-function -ldl")
+set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -fPIC -rdynamic -g -std=c11 -Wall -Wno-deprecated -Werror -Wno-unused-function -ldl")
 
 # SET(LIB_SRC 
 #     East/src/log.cc
@@ -43,11 +44,7 @@ add_dependencies(test East)
 target_link_libraries(test East yaml-cpp)
 
 add_executable(test_config tests/test_config.cc)
-#add_dependencies(test_config East)
-#add_dependencies(test_config yaml-cpp)
-target_link_libraries(test_config East)
-target_link_libraries(test_config yaml-cpp)
-
+target_link_libraries(test_config "${LIBS}")
 
 add_executable(test_thread tests/test_thread.cc)
 target_link_libraries(test_thread "${LIBS}")

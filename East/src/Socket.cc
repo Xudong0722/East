@@ -112,7 +112,7 @@ Socket::sptr Socket::accept() {
   Socket::sptr sock = std::make_shared<Socket>(m_family, m_type, m_protocol);
   int fd = ::accept(m_sock, nullptr, nullptr);
   if (fd == -1) {
-    ELOG_ERROR(g_logger) << "accept(" << m_sock << ") err: " << errno;
+    ELOG_DEBUG(g_logger) << "accept(" << m_sock << ") err: " << errno;
     return nullptr;
   }
   if (sock->init(fd)) {
@@ -124,6 +124,7 @@ Socket::sptr Socket::accept() {
 bool Socket::init(int sock) {
   //目前只有accept会用到这个函数，用来初始化一些socket的参数
   auto fd = FdMgr::GetInst()->getFd(sock);
+  ELOG_INFO(g_logger) << fd;
   if (nullptr != fd && fd->isSocket() && !fd->isClosed()) {
     m_sock = sock;
     m_is_connected = true;
@@ -332,8 +333,8 @@ Address::sptr Socket::getLocalAddr() {
       break;
   }
   socklen_t len = addr->getAddrLen();
-  if (getpeername(m_sock, const_cast<sockaddr*>(addr->getAddr()), &len)) {
-    ELOG_ERROR(g_logger) << "getpeername(" << m_sock << ") err: " << errno;
+  if (getsockname(m_sock, const_cast<sockaddr*>(addr->getAddr()), &len)) {
+    ELOG_ERROR(g_logger) << "getsockname(" << m_sock << ") err: " << errno;
     return Address::sptr(new UnknownAddress(m_family));
   }
 
@@ -448,7 +449,7 @@ void Socket::initSocket() {
   }
 }
 
-void Socket::newSocket() {
+void Socket:: newSocket() {
   m_sock = socket(m_family, m_type, m_protocol);
   if (EAST_LIKELY(m_sock != -1)) {
     initSocket();
@@ -456,5 +457,9 @@ void Socket::newSocket() {
     ELOG_ERROR(g_logger) << "newSocket(" << m_family << ", " << m_type << ", "
                          << m_protocol << ") err: " << errno;
   }
+}
+
+std::ostream& operator<<(std::ostream& os, const Socket& sock) {
+  return sock.dump(os);
 }
 }  // namespace East

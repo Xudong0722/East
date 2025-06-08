@@ -64,7 +64,7 @@ bool TcpServer::bind(const std::vector<Address::sptr>& addrs,
   }
 
   for (auto& i : m_socks) {
-    ELOG_INFO(g_logger) << "Server bind success: " << i;
+    ELOG_INFO(g_logger) << "Server bind success: " << *i;
   }
   return true;
 }
@@ -94,7 +94,7 @@ void TcpServer::stop() {
 }
 
 void TcpServer::handleClient(Socket::sptr sock) {
-  ELOG_INFO(g_logger) << "handleClient: " << sock;
+  ELOG_INFO(g_logger) << "handleClient: " << *sock;
 }
 
 void TcpServer::startAccept(Socket::sptr sock) {
@@ -105,7 +105,7 @@ void TcpServer::startAccept(Socket::sptr sock) {
       m_worker->schedule(
           std::bind(&TcpServer::handleClient, shared_from_this(), client));
     } else {
-      ELOG_ERROR(g_logger) << "Accept error: " << errno
+      ELOG_DEBUG(g_logger) << "Accept error: " << errno
                            << " strerrno: " << strerror(errno);
     }
   }

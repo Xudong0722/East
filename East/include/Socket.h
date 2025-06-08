@@ -139,4 +139,5 @@ class Socket : public std::enable_shared_from_this<Socket>, noncopyable {
   Address::sptr m_remote_addr{nullptr};
 };
 
+std::ostream& operator<<(std::ostream& os, const Socket& sock);
 }  // namespace East

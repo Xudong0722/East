@@ -19,7 +19,6 @@ set(DIR_LIB_SRCS
     src/Config.cc 
     src/FdManager.cc 
     src/Fiber.cc 
-    src/Hook.cc 
     src/IOManager.cc 
     src/LogAppender.cc 
     src/LogEvent.cc 
@@ -35,12 +34,13 @@ set(DIR_LIB_SRCS
     http/Http.cc
     http/http11_parser.rl.cc 
     http/httpclient_parser.rl.cc
-    http/HttpParser.cc)
+    http/HttpParser.cc
+    src/Hook.cc)
 #file(GLOB_RECURSE SRC_FILES "src/*.cc")
 
 
 add_library(${LIBRARY_NAME} SHARED ${DIR_LIB_SRCS})
-target_link_libraries(${LIBRARY_NAME} PRIVATE pthread)
+target_link_libraries(${LIBRARY_NAME} PRIVATE dl pthread)
 #add_library(${LIBRARY_NAME} SHARED ${SRC_FILES})
 
 target_include_directories(${LIBRARY_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include)
