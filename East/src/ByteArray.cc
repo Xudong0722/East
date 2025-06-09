@@ -443,7 +443,7 @@ void ByteArray::setOffset(size_t offset) {
   }
 
   m_offset = offset;
-  if(m_offset > m_size) {
+  if (m_offset > m_size) {
     m_size = m_offset;
   }
   m_cur = m_root;
@@ -616,19 +616,20 @@ uint64_t ByteArray::getReadableBuffers(std::vector<iovec>& buffers,
 
 uint64_t ByteArray::getWriteableBuffers(std::vector<iovec>& buffers,
                                         uint64_t len) {
-  if(len == 0) return 0;
+  if (len == 0)
+    return 0;
   addCapacity(len);
   uint64_t size = len;
   size_t npos = m_offset % m_block_size;
   size_t ncap = m_cur->size - npos;
   struct iovec iov;
   Node* cur = m_cur;
-  while(len > 0) {
-    if(ncap >= len) {
+  while (len > 0) {
+    if (ncap >= len) {
       iov.iov_base = cur->ptr + npos;
       iov.iov_len = len;
       len = 0;
-    }else {
+    } else {
       iov.iov_base = cur->ptr + npos;
       iov.iov_len = ncap;
 

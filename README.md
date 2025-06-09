@@ -19,6 +19,7 @@ East -- 源代码路径
 tests -- 测试代码路径
 
 ## 日志系统
+https://xudong0722.github.io/2025/05/22/East-Log-Module/
 1)
 Log4j
 ```cpp

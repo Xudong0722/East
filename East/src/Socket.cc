@@ -449,7 +449,7 @@ void Socket::initSocket() {
   }
 }
 
-void Socket:: newSocket() {
+void Socket::newSocket() {
   m_sock = socket(m_family, m_type, m_protocol);
   if (EAST_LIKELY(m_sock != -1)) {
     initSocket();
