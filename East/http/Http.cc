@@ -231,5 +231,13 @@ std::string HttpResp::toString() const {
   return ss.str();
 }
 
+std::ostream& operator<<(std::ostream& os, const HttpReq& req) {
+  return req.dump(os);
+}
+
+std::ostream& operator<<(std::ostream& os, const HttpResp& rsp) {
+  return rsp.dump(os);
+}
+
 } //namespace Http
 } //namespace East

@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:14:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-28 22:30:55
+ * @Last Modified time: 2025-06-10 22:20:12
  */
 
 #include "HttpParser.h"
@@ -20,6 +20,14 @@ static East::ConfigVar<uint64_t>::sptr g_http_req_max_body_size =
 
 static uint64_t s_http_req_parser_buffer_size = 0;
 static uint64_t s_http_req_max_body_size = 0;
+
+uint64_t HttpReqParser::GetHttpReqParserBufferSize() {
+  return s_http_req_parser_buffer_size;
+}
+
+uint64_t HttpReqParser::GetHttpReqMaxBodySize() {
+  return s_http_req_max_body_size;  
+}
 
 struct _RequestSizeIniter {
   _RequestSizeIniter() {

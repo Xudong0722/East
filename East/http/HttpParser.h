@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:13:02 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-28 22:36:26
+ * @Last Modified time: 2025-06-10 22:20:14
  */
 
 #pragma once
@@ -26,7 +26,10 @@ public:
   HttpReq::sptr getData() const { return m_req; }
   void setError(int v) { m_error = v; }
   uint64_t getContentLength();
-  
+public:
+  static uint64_t GetHttpReqParserBufferSize();
+  static uint64_t GetHttpReqMaxBodySize();
+
 private:
   HttpReq::sptr m_req;
   http_parser m_parser;

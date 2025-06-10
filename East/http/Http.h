@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-19 14:08:39 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-28 22:41:13
+ * @Last Modified time: 2025-06-10 23:17:00
  */
 
 #pragma once
@@ -357,6 +357,9 @@ private:
   std::string m_reason;
   MapType m_headers;
 }; //class HttpResp
+
+std::ostream& operator<<(std::ostream& os, const HttpReq& req);
+std::ostream& operator<<(std::ostream& os, const HttpResp& rsp);
 
 } // namespace Http
 } // namespace East
