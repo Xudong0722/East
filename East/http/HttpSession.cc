@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-10 22:11:26 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-10 23:21:27
+ * @Last Modified time: 2025-06-10 23:26:21
  */
 
 #include "HttpSession.h"
@@ -33,7 +33,7 @@ HttpReq::sptr HttpSession::recvRequest() {
       return nullptr;
     }
     offset = len - parse_len;  //[...parse_len...len.....buf_size]
-    if(offset == buf_size) {
+    if(offset == (int)buf_size) {
       return nullptr;
     }
     if(parser->isFinished()) {
@@ -66,7 +66,10 @@ HttpReq::sptr HttpSession::recvRequest() {
 }
 
 int HttpSession::sendResponse(HttpResp::sptr rsp) {
-  
+  std::stringstream ss;
+  ss << *rsp;
+  std::string data = ss.str();
+  return writeFixSize(data.c_str(), data.size());
 }
 
 }//namespace Http
