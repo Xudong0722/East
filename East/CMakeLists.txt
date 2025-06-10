@@ -35,7 +35,9 @@ set(DIR_LIB_SRCS
     http/http11_parser.rl.cc 
     http/httpclient_parser.rl.cc
     http/HttpParser.cc
-    src/Hook.cc)
+    src/Hook.cc
+    src/Stream.cc
+    src/SocketStream.cc)
 #file(GLOB_RECURSE SRC_FILES "src/*.cc")
 
 
