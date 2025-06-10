@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:14:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-10 22:20:12
+ * @Last Modified time: 2025-06-10 23:45:32
  */
 
 #include "HttpParser.h"
@@ -130,6 +130,7 @@ return value:
 size_t HttpReqParser::execute(char* data, size_t len) {
   size_t n = http_parser_execute(&m_parser, data, len, 0);
   //这里只会处理header，所以剩下的就是body，将body移动到前面，len-n就是body的长度
+  //这里可能不会一次性就把header解析完毕，所以每次解析多少都会把后面的往前移动多少
   memmove(data, data + n, (len - n));
   return n;
 }

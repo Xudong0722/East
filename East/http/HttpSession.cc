@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-10 22:11:26 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-10 23:26:21
+ * @Last Modified time: 2025-06-10 23:49:36
  */
 
 #include "HttpSession.h"
@@ -20,19 +20,22 @@ HttpReq::sptr HttpSession::recvRequest() {
   
   size_t buf_size = HttpReqParser::GetHttpReqParserBufferSize();
   std::unique_ptr<char[]> buf(new char[buf_size]);
-  int offset = 0;
+  int offset = 0; //当前读到哪里了
   char* data = buf.get();
   do {
     int len = read(data + offset, buf_size - offset);
     if(len <= 0) {
       return nullptr;
     }
-    len += offset;
-    int parse_len = parser->execute(data, len); //当前已经解析的长度
+    len += offset; //所有已读数据的长度
+    int parse_len = parser->execute(data, len); //当前已经可以解析的长度
     if(parser->hasError()) {
       return nullptr;
     }
-    offset = len - parse_len;  //[...parse_len...len.....buf_size]
+    //[...parse_len...len.....buf_size]
+    //因为execute会将data的起始变成data+parse_len, 所以这里的offset就可以直接用len-parse_len
+    //这样后面read(data+offset...)还是从上次没读过的地方继续读的
+    offset = len - parse_len;  
     if(offset == (int)buf_size) {
       return nullptr;
     }
@@ -41,7 +44,7 @@ HttpReq::sptr HttpSession::recvRequest() {
     }
   }while(true);
   
-  int64_t body_len = parser->getContentLength();
+  int64_t body_len = parser->getContentLength();  //body需要我们单独解析
   if(body_len > 0) {
     std::string body(' ', body_len);
     //注意parser的execute只会处理header，并且会把剩下的部分移动到data前面，所以直接从开始读即可
