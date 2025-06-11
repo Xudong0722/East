@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:14:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-10 23:45:32
+ * @Last Modified time: 2025-06-11 22:30:40
  */
 
 #include "HttpParser.h"
@@ -29,6 +29,8 @@ uint64_t HttpReqParser::GetHttpReqMaxBodySize() {
   return s_http_req_max_body_size;  
 }
 
+namespace {
+
 struct _RequestSizeIniter {
   _RequestSizeIniter() {
     s_http_req_parser_buffer_size = g_http_req_parser_buffer_size->getValue();
@@ -43,6 +45,9 @@ struct _RequestSizeIniter {
     });
   }
 };
+
+static _RequestSizeIniter _req_initer;
+}
 
 void on_request_method(void* data, const char* at, size_t length) {
   HttpReqParser* parser = static_cast<HttpReqParser*>(data);
