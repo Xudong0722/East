@@ -5,6 +5,7 @@
  * @Last Modified time: 2025-06-12 23:32:31
  */
 
+#include <fnmatch.h>
 #include "Servlet.h"
 
 namespace East {
@@ -80,7 +81,7 @@ Servlet::sptr ServletDispatch::getServlet(const std::string& uri) {
 Servlet::sptr ServletDispatch::getGlobServlet(const std::string& uri) {
   MutexType::RLockGuard rlock(m_mutex);
   auto it = std::find_if(m_globs.begin(), m_globs.end(), [&uri](const auto& item){
-    return item.first == uri;
+    return 0 == fnmatch(item.first.c_str(), uri.c_str(), 0);
   });
   if(it == m_globs.end()) return nullptr;
   return it->second;

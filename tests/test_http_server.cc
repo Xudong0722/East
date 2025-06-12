@@ -17,6 +17,21 @@ void test(){
   while(!server->bind(addr)) {
     sleep(2);
   }
+
+  auto sd = server->getServletDispatch();
+  sd->addServlet("/East/conf", [](East::Http::HttpReq::sptr req, 
+    East::Http::HttpResp::sptr rsp,
+    East::Http::HttpSession::sptr session){
+      rsp->setBody(req->toString());
+      return 0;
+    });
+
+  sd->addGlobServlet("/East/*", [](East::Http::HttpReq::sptr req, 
+    East::Http::HttpResp::sptr rsp,
+    East::Http::HttpSession::sptr session){
+      rsp->setBody("Glob:\r\n" + req->toString());
+      return 0;
+    });
   server->start();
 }
 
