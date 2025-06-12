@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-12 21:39:10 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-12 21:56:09
+ * @Last Modified time: 2025-06-12 23:26:09
  */
 
 #pragma once
@@ -27,7 +27,7 @@ public:
   const std::string& getName() const { return m_name; }
 
 protected:
-  std::string m_name;
+  std::string m_name; //for log
 };
 
 class FunctionServlet : public Servlet {
@@ -41,12 +41,13 @@ public:
 private:
   callback m_cb;
 };
-
+ 
 class ServletDispatch : public Servlet {
 public:
   using sptr = std::shared_ptr<ServletDispatch>;
   using MutexType = RWLock;
   
+  ServletDispatch();
   virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp, HttpSession::sptr session) override;
   
   void addServlet(const std::string& uri, Servlet::sptr slt);
@@ -75,5 +76,11 @@ private:
   MutexType m_mutex;
 };
 
+class NotFoundServlet: public Servlet {
+public:
+  using sptr = std::shared_ptr<NotFoundServlet>;
+  NotFoundServlet();
+  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp, HttpSession::sptr session) override;
+};
 } // namespace Htpp
 } // namespace East

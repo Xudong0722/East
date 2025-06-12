@@ -39,7 +39,8 @@ set(DIR_LIB_SRCS
     src/Hook.cc
     src/Stream.cc
     src/SocketStream.cc
-    http/HttpServer.cc)
+    http/HttpServer.cc
+    http/Servlet.cc)
 #file(GLOB_RECURSE SRC_FILES "src/*.cc")
 
 
