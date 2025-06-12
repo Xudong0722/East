@@ -103,7 +103,7 @@ NotFoundServlet::NotFoundServlet()
 int32_t NotFoundServlet::handle(HttpReq::sptr req, HttpResp::sptr rsp, HttpSession::sptr session) {
   static const std::string RSP_BODY = "<html><head><title>404 Not Found"
     "</title></head><body><center><h1>404 Not Found</h1></center>"
-    "<hr><center>East/1.0.0</center></body><html>";
+    "<hr><center>East/1.0.0</center></body></html>";
 
     rsp->setStatus(HttpStatus::NOT_FOUND);
     rsp->setHeader("Content-Type", "text/html");

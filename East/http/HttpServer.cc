@@ -34,7 +34,7 @@ void HttpServer::handleClient(Socket::sptr client) {
     HttpResp::sptr rsp = std::make_shared<HttpResp>(req->getVersion(), req->isClose() || !m_isKeepAlive);
     m_dispatch->handle(req, rsp, session);
     // rsp->setBody("hello world");
-    // session->sendResponse(rsp);
+    session->sendResponse(rsp);
   }while(m_isKeepAlive);
   session->close();
 }
