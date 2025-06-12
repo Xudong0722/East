@@ -14,7 +14,9 @@ namespace Http {
 static Logger::sptr g_logger = ELOG_NAME("system");
 
 HttpServer::HttpServer(bool keep_alive, East::IOManager* worker, East::IOManager* accept_worker)
-: TcpServer(worker, accept_worker), m_isKeepAlive(keep_alive) {
+: TcpServer(worker, accept_worker)
+, m_isKeepAlive(keep_alive)
+, m_dispatch(std::make_shared<ServletDispatch>()) {
 
 }
             
@@ -28,9 +30,11 @@ void HttpServer::handleClient(Socket::sptr client) {
         << ", client: " << *client;
       break;
     }
+    
     HttpResp::sptr rsp = std::make_shared<HttpResp>(req->getVersion(), req->isClose() || !m_isKeepAlive);
-    rsp->setBody("hello world");
-    session->sendResponse(rsp);
+    m_dispatch->handle(req, rsp, session);
+    // rsp->setBody("hello world");
+    // session->sendResponse(rsp);
   }while(m_isKeepAlive);
   session->close();
 }

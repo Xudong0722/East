@@ -5,6 +5,7 @@
  * @Last Modified time: 2025-06-10 22:16:56
  */
 
+#pragma once
 #include "../include/SocketStream.h"
 #include "Http.h"
 
