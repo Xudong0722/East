@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-18 23:50:05 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-19 00:16:37
+ * @Last Modified time: 2025-06-19 00:43:25
  */
 
 #include "../East/include/Elog.h"
@@ -29,6 +29,7 @@ void run() {
   auto req = std::make_shared<East::Http::HttpReq>();
   ELOG_INFO(g_logger) << "req: " << *req;
   req->setHeader("host", "www.baidu.com");
+  //req->setPath("/test/");
   conn->sendRequest(req);
   auto rsp = conn->recvResponse();
   if(!rsp) {
@@ -36,7 +37,7 @@ void run() {
     return ;
   }
 
-  ELOG_INFO(g_logger) << "rsp: " << *rsp;
+  //ELOG_INFO(g_logger) << "rsp: " << *rsp;
 }
 
 int main() {
