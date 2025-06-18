@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-18 23:26:15 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-18 23:41:24
+ * @Last Modified time: 2025-06-19 01:20:45
  */
 
 #include "HttpConnection.h"
@@ -46,7 +46,7 @@ HttpResp::sptr HttpConnection::recvResponse() {
   
   int64_t body_len = parser->getContentLength();  //body需要我们单独解析
   if(body_len > 0) {
-    std::string body(' ', body_len);
+    std::string body(body_len, ' ');
     //注意parser的execute只会处理header，并且会把剩下的部分移动到data前面，所以直接从开始读即可
     int len = 0;
     if(body_len >= offset){

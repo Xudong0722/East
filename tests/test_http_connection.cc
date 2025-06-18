@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-18 23:50:05 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-19 00:43:25
+ * @Last Modified time: 2025-06-19 01:21:24
  */
 
 #include "../East/include/Elog.h"
@@ -37,7 +37,7 @@ void run() {
     return ;
   }
 
-  //ELOG_INFO(g_logger) << "rsp: " << *rsp;
+  ELOG_INFO(g_logger) << "rsp: " << *rsp;
 }
 
 int main() {
