@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-10 22:07:53 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-10 22:16:56
+ * @Last Modified time: 2025-06-18 23:43:06
  */
 
 #pragma once
@@ -12,6 +12,7 @@
 namespace East {
 namespace Http {
 
+//Session是Server端的概念，而Connection是client端的概念
 class HttpSession: public SocketStream {
 public:
   using sptr = std::shared_ptr<HttpSession>;

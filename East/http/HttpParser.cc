@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:14:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-11 22:30:40
+ * @Last Modified time: 2025-06-18 23:40:19
  */
 
 #include "HttpParser.h"
@@ -17,9 +17,15 @@ static East::ConfigVar<uint64_t>::sptr g_http_req_parser_buffer_size =
     East::Config::Lookup<uint64_t>("http.req_parser.buffer_size", 4 * 1024ull, "http request parser buffer size");
 static East::ConfigVar<uint64_t>::sptr g_http_req_max_body_size =
     East::Config::Lookup<uint64_t>("http.req_parser.max_body_size", 6 * 1024 * 1024ull, "http request parser max body size");
+static East::ConfigVar<uint64_t>::sptr g_http_resp_parser_buffer_size =
+    East::Config::Lookup<uint64_t>("http.resp_parser.buffer_size", 4 * 1024ull, "http response parser buffer size");
+static East::ConfigVar<uint64_t>::sptr g_http_resp_max_body_size =
+    East::Config::Lookup<uint64_t>("http.resp_parser.max_body_size", 6 * 1024 * 1024ull, "http response parser max body size");
 
 static uint64_t s_http_req_parser_buffer_size = 0;
 static uint64_t s_http_req_max_body_size = 0;
+static uint64_t s_http_resp_parser_buffer_size = 0;
+static uint64_t s_http_resp_max_body_size = 0;
 
 uint64_t HttpReqParser::GetHttpReqParserBufferSize() {
   return s_http_req_parser_buffer_size;
@@ -29,12 +35,23 @@ uint64_t HttpReqParser::GetHttpReqMaxBodySize() {
   return s_http_req_max_body_size;  
 }
 
+uint64_t HttpRespParser::GetHttpRespParserBufferSize() {
+  return s_http_resp_parser_buffer_size;
+}
+
+uint64_t HttpRespParser::GetHttpRespMaxBodySize() {
+  return s_http_resp_max_body_size;
+}
+
 namespace {
 
 struct _RequestSizeIniter {
   _RequestSizeIniter() {
     s_http_req_parser_buffer_size = g_http_req_parser_buffer_size->getValue();
     s_http_req_max_body_size = g_http_req_max_body_size->getValue();
+    s_http_resp_parser_buffer_size = g_http_resp_parser_buffer_size->getValue();
+    s_http_resp_max_body_size = g_http_resp_max_body_size->getValue();
+    
     g_http_req_parser_buffer_size->addListener([](const uint64_t& old_v, const uint64_t new_v) {
       s_http_req_parser_buffer_size = new_v;
       ELOG_INFO(g_logger) << "http.req_parser.buffer_size changed from " << old_v << " to " << new_v;
@@ -42,6 +59,14 @@ struct _RequestSizeIniter {
     g_http_req_max_body_size->addListener([](const uint64_t& old_v, const uint64_t new_v) {
       s_http_req_max_body_size = new_v;
       ELOG_INFO(g_logger) << "http.req_parser.max_body_size changed from " << old_v << " to " << new_v;
+    });
+    g_http_resp_parser_buffer_size->addListener([](const uint64_t& old_v, const uint64_t new_v) {
+      s_http_resp_parser_buffer_size = new_v;
+      ELOG_INFO(g_logger) << "http.resp_parser.buffer_size changed from " << old_v << " to " << new_v;
+    });
+    g_http_resp_max_body_size->addListener([](const uint64_t& old_v, const uint64_t new_v) {
+      s_http_resp_max_body_size = new_v;
+      ELOG_INFO(g_logger) << "http.resp_parser.max_body_size changed from " << old_v << " to " << new_v;
     });
   }
 };

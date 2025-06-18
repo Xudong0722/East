@@ -88,5 +88,8 @@ target_link_libraries(echo_server "${LIBS}")
 add_executable(test_http_server tests/test_http_server.cc)
 target_link_libraries(test_http_server "${LIBS}")
 
+add_executable(test_http_connection tests/test_http_connection.cc)
+target_link_libraries(test_http_connection "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

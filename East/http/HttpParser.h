@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:13:02 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-10 22:20:14
+ * @Last Modified time: 2025-06-18 23:36:15
  */
 
 #pragma once
@@ -53,7 +53,11 @@ public:
   HttpResp::sptr getData() const { return m_resp; }
   void setError(int v) { m_error = v; }
   uint64_t getContentLength();
-  
+
+public:
+  static uint64_t GetHttpRespParserBufferSize();
+  static uint64_t GetHttpRespMaxBodySize();
+
 private:
   httpclient_parser m_parser;
   HttpResp::sptr m_resp;

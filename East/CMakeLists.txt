@@ -36,6 +36,7 @@ set(DIR_LIB_SRCS
     http/httpclient_parser.rl.cc
     http/HttpParser.cc
     http/HttpSession.cc
+    http/HttpConnection.cc
     src/Hook.cc
     src/Stream.cc
     src/SocketStream.cc
