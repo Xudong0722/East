@@ -31,7 +31,7 @@ uint64_t GetCurrentTimeInMs();
 //get current time(us)
 uint64_t GetCurrentTimeInUs();
 
-template<typename T>
+template <typename T>
 auto Enum2Utype(T e) -> std::underlying_type_t<T> {
   return static_cast<std::underlying_type_t<T>>(e);
 }

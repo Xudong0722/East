@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include "Address.h"
 /*
@@ -22,7 +22,7 @@
 
 namespace East {
 class Uri {
-public:
+ public:
   using sptr = std::shared_ptr<Uri>;
   static Uri::sptr Create(const std::string& uri);
   Uri();
@@ -48,13 +48,14 @@ public:
   std::ostream& dump(std::ostream& os) const;
   std::string toString() const;
   Address::sptr createAddress() const;
-private:
-  int32_t m_port{0};          // port
-  std::string m_scheme;      // scheme
-  std::string m_userinfo;    // userinfo
-  std::string m_host;        // host
-  std::string m_path;        // path
-  std::string m_query;       // query
-  std::string m_fragment;    // fragment
+
+ private:
+  int32_t m_port{0};       // port
+  std::string m_scheme;    // scheme
+  std::string m_userinfo;  // userinfo
+  std::string m_host;      // host
+  std::string m_path;      // path
+  std::string m_query;     // query
+  std::string m_fragment;  // fragment
 };
-};//namespace East
+};  //namespace East

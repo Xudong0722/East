@@ -12,7 +12,7 @@
 namespace East {
 
 class Stream {
-public:
+ public:
   using sptr = std::shared_ptr<Stream>;
   virtual ~Stream() {}
 
@@ -30,4 +30,4 @@ public:
 
   virtual void close() = 0;
 };
-} // namespace East
+}  // namespace East

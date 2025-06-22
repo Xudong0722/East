@@ -151,7 +151,7 @@ HttpResult::sptr HttpConnection::DoRequest(HttpMethod method,
     }
     req->setHeader(item.first, item.second);
   }
-  if(has_host) {
+  if(!has_host) {
     req->setHeader("Host", uri->getHost());
   }
   return DoRequest(req, uri, timeout_ms);
@@ -178,7 +178,8 @@ HttpResult::sptr HttpConnection::DoRequest(HttpReq::sptr req, Uri::sptr uri,
                                         nullptr, "Invalid host: " + uri->getHost());
   }
   Socket::sptr sock = Socket::CreateTCP(addr);
-  if(nullptr == sock) {
+  bool conn_res = sock->connect(addr, timeout_ms);
+  if(!conn_res) {
     return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::CONNECTION_FAIL),
                                         nullptr, "Connect failed: " + addr->toString());
   }

@@ -5,25 +5,26 @@
  * @Last Modified time: 2025-06-19 01:21:24
  */
 
+#include "../East/http/HttpConnection.h"
 #include "../East/include/Elog.h"
 #include "../East/include/IOManager.h"
 #include "../East/include/util.h"
-#include "../East/http/HttpConnection.h"
 
 static East::Logger::sptr g_logger = ELOG_ROOT();
 
 void run() {
-  East::Address::sptr addr = East::Address::LookupAnyIPAddress("www.baidu.com:80");
-  if(!addr) {
+  East::Address::sptr addr =
+      East::Address::LookupAnyIPAddress("www.baidu.com:80");
+  if (!addr) {
     ELOG_INFO(g_logger) << "get addr error";
-    return ;
+    return;
   }
 
   East::Socket::sptr sock = East::Socket::CreateTCP(addr);
   bool rt = sock->connect(addr);
-  if(!rt) {
+  if (!rt) {
     ELOG_INFO(g_logger) << "connect " << *addr << " failed.";
-    return ;
+    return;
   }
 
   auto conn = std::make_shared<East::Http::HttpConnection>(sock);
@@ -33,18 +34,19 @@ void run() {
   //req->setPath("/test/");
   conn->sendRequest(req);
   auto rsp = conn->recvResponse();
-  if(!rsp) {
+  if (!rsp) {
     ELOG_INFO(g_logger) << "recv response error";
-    return ;
+    return;
   }
 
   ELOG_INFO(g_logger) << "rsp: " << *rsp;
 }
 
 void run2() {
-  East::Http::HttpResult::sptr res = East::Http::HttpConnection::DoGet("http://www.baidu.com/", {}, {}, 3000);
+  East::Http::HttpResult::sptr res = East::Http::HttpConnection::DoGet(
+      "http://www.baidu.com:80", {}, {}, 3000);
 
-  if(res->result != East::Enum2Utype(East::Http::HttpResult::ErrorCode::OK)) {
+  if (res->result != East::Enum2Utype(East::Http::HttpResult::ErrorCode::OK)) {
     ELOG_INFO(g_logger) << "DoGet error: " << res->error;
     return;
   }
@@ -55,6 +57,6 @@ int main() {
   East::IOManager iom(2);
   //iom.schedule(run);
   iom.schedule(run2);
-  
+
   return 0;
 }
