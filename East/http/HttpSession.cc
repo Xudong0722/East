@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-10 22:11:26 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-12 23:30:57
+ * @Last Modified time: 2025-06-21 17:26:48
  */
 
 #include "HttpSession.h"
@@ -25,11 +25,13 @@ HttpReq::sptr HttpSession::recvRequest() {
   do {
     int len = read(data + offset, buf_size - offset);
     if(len <= 0) {
+      close();
       return nullptr;
     }
     len += offset; //所有已读数据的长度
     int parse_len = parser->execute(data, len); //当前已经可以解析的长度
     if(parser->hasError()) {
+      close();
       return nullptr;
     }
     //[...parse_len...len.....buf_size]
@@ -37,6 +39,7 @@ HttpReq::sptr HttpSession::recvRequest() {
     //这样后面read(data+offset...)还是从上次没读过的地方继续读的
     offset = len - parse_len;  
     if(offset == (int)buf_size) {
+      close();
       return nullptr;
     }
     if(parser->isFinished()) {
@@ -60,6 +63,7 @@ HttpReq::sptr HttpSession::recvRequest() {
     body_len -= offset;
     if(body_len > 0) {
       if(readFixSize(&body[len], body_len) <= 0) {
+        close();
         return nullptr;
       }
       parser->getData()->setBody(body);

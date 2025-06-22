@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:14:54 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-18 23:40:19
+ * @Last Modified time: 2025-06-21 16:57:15
  */
 
 #include "HttpParser.h"
@@ -237,7 +237,10 @@ HttpRespParser::HttpRespParser() {
   m_parser.data = this;
 }
 
-size_t HttpRespParser::execute(char* data, size_t len) {
+size_t HttpRespParser::execute(char* data, size_t len, bool chunck) {
+  if(chunck) {
+    httpclient_parser_init(&m_parser);
+  }
   size_t n = httpclient_parser_execute(&m_parser, data, len, 0);
   memmove(data, data + n, (len - n));
   return n;

@@ -2,8 +2,9 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-18 23:26:15 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-19 01:20:45
+ * @Last Modified time: 2025-06-21 17:33:25
  */
+#include <iostream>
 
 #include "HttpConnection.h"
 #include "HttpParser.h"
@@ -25,11 +26,13 @@ HttpResp::sptr HttpConnection::recvResponse() {
   do {
     int len = read(data + offset, buf_size - offset);
     if(len <= 0) {
+      close();
       return nullptr;
     }
     len += offset; //所有已读数据的长度
-    int parse_len = parser->execute(data, len); //当前已经可以解析的长度
+    int parse_len = parser->execute(data, len, false); //当前已经可以解析的长度
     if(parser->hasError()) {
+      close();
       return nullptr;
     }
     //[...parse_len...len.....buf_size]
@@ -37,34 +40,82 @@ HttpResp::sptr HttpConnection::recvResponse() {
     //这样后面read(data+offset...)还是从上次没读过的地方继续读的
     offset = len - parse_len;  
     if(offset == (int)buf_size) {
+      close();
       return nullptr;
     }
     if(parser->isFinished()) {
         break;
     }
   }while(true);
-  
-  int64_t body_len = parser->getContentLength();  //body需要我们单独解析
-  if(body_len > 0) {
-    std::string body(body_len, ' ');
-    //注意parser的execute只会处理header，并且会把剩下的部分移动到data前面，所以直接从开始读即可
-    int len = 0;
-    if(body_len >= offset){
-        //先读这么多
-        memcpy(&body[0], data, offset);
-        len = offset;
-    }else{
-        memcpy(&body[0], data, len);
-        len = body_len;
-    }
-    body_len -= offset;
-    if(body_len > 0) {
-      if(readFixSize(&body[len], body_len) <= 0) {
-        return nullptr;
+  auto& client_parser = parser->getParser();
+  std::cout <<"----------------------" << client_parser.chunked<<std::endl;
+  if(client_parser.chunked) {
+    std::string body;
+    int len = offset;
+    do {
+      do {
+        int rt = read(data + len, buf_size - len);
+        if(rt <= 0) {
+          close();
+          return nullptr;
+        }
+        len += rt;
+        size_t parser_len = parser->execute(data, len, true);
+        if(parser->hasError()) {
+          close();
+          return nullptr;
+        }
+        len -= parser_len;
+        if(len == (int)buf_size) {
+          close();
+          return nullptr;
+        }
+      }while(!parser->isFinished());
+      if(client_parser.content_len <= len) {
+        body.append(data, client_parser.content_len);
+        memmove(data, data + client_parser.content_len, len - client_parser.content_len);
+        len -= client_parser.content_len;
+      }else{
+        body.append(data, len);
+        int left = client_parser.content_len - len;
+        while(left > 0){
+          int rt = read(data, left > (int)buf_size ? buf_size : left);
+          if(rt <= 0){
+            close();
+            return nullptr;
+          }
+          body.append(data, rt);
+          left -= rt;
+        }
+        len = 0;
       }
-      parser->getData()->setBody(body);
+    }while(!client_parser.chunks_done);
+    parser->getData()->setBody(body);
+  }else {
+    int64_t body_len = parser->getContentLength();  //body需要我们单独解析
+    if(body_len > 0) {
+        std::string body(body_len, ' ');
+        //注意parser的execute只会处理header，并且会把剩下的部分移动到data前面，所以直接从开始读即可
+        int len = 0;
+        if(body_len >= offset){
+            //先读这么多
+            memcpy(&body[0], data, offset);
+            len = offset;
+        }else{
+            memcpy(&body[0], data, len);
+            len = body_len;
+        }
+        body_len -= offset;
+        if(body_len > 0) {
+        if(readFixSize(&body[len], body_len) <= 0) {
+          close();
+          return nullptr;
+        }
+        parser->getData()->setBody(body);
+        }
     }
   }
+
   return parser->getData();
 }
 

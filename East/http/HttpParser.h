@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-23 00:13:02 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-18 23:36:15
+ * @Last Modified time: 2025-06-21 17:00:23
  */
 
 #pragma once
@@ -46,13 +46,14 @@ class HttpRespParser {
 public:
   using sptr = std::shared_ptr<HttpRespParser>;
   HttpRespParser();
-  size_t execute(char* data, size_t len);
+  size_t execute(char* data, size_t len, bool chunck);
   int isFinished();
   int hasError();
 
   HttpResp::sptr getData() const { return m_resp; }
   void setError(int v) { m_error = v; }
   uint64_t getContentLength();
+  httpclient_parser& getParser() { return m_parser; }
 
 public:
   static uint64_t GetHttpRespParserBufferSize();
