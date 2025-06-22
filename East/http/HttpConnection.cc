@@ -138,20 +138,22 @@ HttpResult::sptr HttpConnection::DoRequest(HttpMethod method,
   req->setBody(body);
   bool has_host{false};
   for(const auto& item : headers) {
-    if(strncasecmp(item.first.c_str(), "connection", 10) == 0) {
-      if(strncasecmp(item.second.c_str(), "keep-alive", 10) == 0) {
+    if(strcasecmp(item.first.c_str(), "connection") == 0) {
+      if(strcasecmp(item.second.c_str(), "keep-alive") == 0) {
         req->setClose(false);
         continue;
       }
     }
 
     if(!has_host && 
-       strncasecmp(item.first.c_str(), "host", 4) == 0) {
+       strcasecmp(item.first.c_str(), "host") == 0) {
       has_host = !item.second.empty();
     }
     req->setHeader(item.first, item.second);
   }
-
+  if(has_host) {
+    req->setHeader("Host", uri->getHost());
+  }
   return DoRequest(req, uri, timeout_ms);
 }
 
