@@ -91,5 +91,8 @@ target_link_libraries(test_http_server "${LIBS}")
 add_executable(test_http_connection tests/test_http_connection.cc)
 target_link_libraries(test_http_connection "${LIBS}")
 
+add_executable(test_uri tests/test_uri.cc)
+target_link_libraries(test_uri "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

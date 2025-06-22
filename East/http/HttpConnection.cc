@@ -2,10 +2,11 @@
  * @Author: Xudong0722 
  * @Date: 2025-06-18 23:26:15 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-21 17:33:25
+ * @Last Modified time: 2025-06-22 13:57:45
  */
 #include <iostream>
 
+#include "../include/util.h"
 #include "HttpConnection.h"
 #include "HttpParser.h"
 namespace East {
@@ -126,5 +127,120 @@ int HttpConnection::sendRequest(HttpReq::sptr req) {
   return writeFixSize(data.c_str(), data.size());
 }
 
-}//namespace Http
+HttpResult::sptr HttpConnection::DoRequest(HttpMethod method, 
+                                           Uri::sptr uri,
+                                           const HttpReq::MapType& headers,
+                                           const std::string& body,
+                                           uint64_t timeout_ms) {
+  HttpReq::sptr req = std::make_shared<HttpReq>();
+  req->setPath(uri->getPath());
+  req->setMethod(method);
+  req->setBody(body);
+  bool has_host{false};
+  for(const auto& item : headers) {
+    if(strncasecmp(item.first.c_str(), "connection", 10) == 0) {
+      if(strncasecmp(item.second.c_str(), "keep-alive", 10) == 0) {
+        req->setClose(false);
+        continue;
+      }
+    }
+
+    if(!has_host && 
+       strncasecmp(item.first.c_str(), "host", 4) == 0) {
+      has_host = !item.second.empty();
+    }
+    req->setHeader(item.first, item.second);
+  }
+
+  return DoRequest(req, uri, timeout_ms);
+}
+
+HttpResult::sptr HttpConnection::DoRequest(HttpMethod method,
+                                           const std::string& url,
+                                           const HttpReq::MapType& headers,
+                                           const std::string& body,
+                                           uint64_t timeout_ms) {
+  Uri::sptr uri = Uri::Create(url);
+  if(nullptr == uri) {
+    return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::INVALID_URL),
+                                        nullptr, "Invalid URL: " + url);
+  }
+  return DoRequest(method, uri, headers, body, timeout_ms);
+}
+
+HttpResult::sptr HttpConnection::DoRequest(HttpReq::sptr req, Uri::sptr uri,
+                                           uint64_t timeout_ms) {
+  Address::sptr addr = uri->createAddress();
+  if(nullptr == addr) {
+    return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::INVALID_HOST),
+                                        nullptr, "Invalid host: " + uri->getHost());
+  }
+  Socket::sptr sock = Socket::CreateTCP(addr);
+  if(nullptr == sock) {
+    return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::CONNECTION_FAIL),
+                                        nullptr, "Connect failed: " + addr->toString());
+  }
+
+  sock->setRecvTimeout(timeout_ms);
+  HttpConnection::sptr conn = std::make_shared<HttpConnection>(sock);
+
+  int rt = conn->sendRequest(req);
+  if(rt == 0) {
+    return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::SEND_CLOSE_BY_PEER),
+                                        nullptr, "Send close by peer: " + addr->toString());
+  } else if(rt < 0) {
+    return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::SEND_SOCKET_ERROR),
+                                        nullptr, "Send socket error: " + std::to_string(errno)
+                                        + " errstr: " + std::string(strerror(errno)));
+  }
+
+  auto resp = conn->recvResponse();
+  if(nullptr == resp) {
+    return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::TIMEOUT),
+                                        nullptr, "Receive response timeout: " + addr->toString() + " timeout ms: " 
+                                        + std::to_string(timeout_ms));
+  }
+  return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::OK),
+                                        resp, "Request success: " + addr->toString());
+}
+
+HttpResult::sptr HttpConnection::DoGet(const std::string& url,
+                                       const HttpReq::MapType& headers,
+                                       const std::string& body,
+                                       uint64_t timeout_ms) {
+  Uri::sptr uri = Uri::Create(url);
+  if(nullptr == uri) {
+    return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::INVALID_URL),
+                                        nullptr, "Invalid URL: " + url);
+  }
+  return DoGet(uri, headers, body, timeout_ms);
+}
+
+HttpResult::sptr HttpConnection::DoGet(Uri::sptr uri,
+                                       const HttpReq::MapType& headers,
+                                       const std::string& body,
+                                       uint64_t timeout_ms) {
+  return DoRequest(HttpMethod::GET, uri, headers, body, timeout_ms);
+}
+
+HttpResult::sptr HttpConnection::DoPost(const std::string& url,
+                                        const HttpReq::MapType& headers,
+                                        const std::string& body,
+                                        uint64_t timeout_ms) {
+  Uri::sptr uri = Uri::Create(url);
+  if(nullptr == uri) {
+    return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::INVALID_URL),
+                                        nullptr, "Invalid URL: " + url);
+  }
+  return DoPost(uri, headers, body, timeout_ms);
+}
+
+HttpResult::sptr HttpConnection::DoPost(Uri::sptr uri,
+                                        const HttpReq::MapType& headers,
+                                        const std::string& body,
+                                        uint64_t timeout_ms) {
+  return DoRequest(HttpMethod::POST, uri, headers, body, timeout_ms);
+}
+
+}  //namespace Http
 }//namespace East
