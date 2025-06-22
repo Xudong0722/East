@@ -13,8 +13,8 @@ namespace East {
 namespace Http {
 
 //Session是Server端的概念，而Connection是client端的概念
-class HttpSession: public SocketStream {
-public:
+class HttpSession : public SocketStream {
+ public:
   using sptr = std::shared_ptr<HttpSession>;
 
   HttpSession(Socket::sptr sock, bool owner = true);
@@ -22,5 +22,5 @@ public:
   int sendResponse(HttpResp::sptr rsp);
 };
 
-}//namespace Http
-}//namespace East
+}  //namespace Http
+}  //namespace East

@@ -15,18 +15,21 @@ namespace East {
 namespace Http {
 
 class HttpServer : public TcpServer {
-public:
+ public:
   using sptr = std::shared_ptr<HttpServer>;
-  HttpServer(bool keep_alive = false, East::IOManager* worker = East::IOManager::GetThis(),
-            East::IOManager* accept_worker = East::IOManager::GetThis());
-  
+  HttpServer(bool keep_alive = false,
+             East::IOManager* worker = East::IOManager::GetThis(),
+             East::IOManager* accept_worker = East::IOManager::GetThis());
+
   ServletDispatch::sptr getServletDispatch() const { return m_dispatch; }
   void setServletDispatch(ServletDispatch::sptr v) { m_dispatch = v; }
-protected:
+
+ protected:
   virtual void handleClient(Socket::sptr client) override;
-private:
+
+ private:
   bool m_isKeepAlive{false};
   ServletDispatch::sptr m_dispatch{nullptr};
 };
-} // namespace Http
-} // namespace East
+}  // namespace Http
+}  // namespace East

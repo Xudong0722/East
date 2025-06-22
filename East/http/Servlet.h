@@ -6,50 +6,54 @@
  */
 
 #pragma once
-#include "Http.h"
-#include "HttpSession.h"
-#include "../include/Mutex.h"
-#include <memory>
 #include <functional>
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include "../include/Mutex.h"
+#include "Http.h"
+#include "HttpSession.h"
 
 namespace East {
 namespace Http {
-    
+
 class Servlet {
-public:
+ public:
   using sptr = std::shared_ptr<Servlet>;
   Servlet(const std::string& name) : m_name(name) {}
-  virtual~Servlet() {}
+  virtual ~Servlet() {}
 
-  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp, HttpSession::sptr session) = 0;
+  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp,
+                         HttpSession::sptr session) = 0;
   const std::string& getName() const { return m_name; }
 
-protected:
-  std::string m_name; //for log
+ protected:
+  std::string m_name;  //for log
 };
 
 class FunctionServlet : public Servlet {
-public:
+ public:
   using sptr = std::shared_ptr<FunctionServlet>;
-  using callback = std::function<int32_t(HttpReq::sptr, HttpResp::sptr, HttpSession::sptr)>;
+  using callback =
+      std::function<int32_t(HttpReq::sptr, HttpResp::sptr, HttpSession::sptr)>;
 
   FunctionServlet(callback cb);
-  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp, HttpSession::sptr session) override;
+  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp,
+                         HttpSession::sptr session) override;
 
-private:
+ private:
   callback m_cb;
 };
- 
+
 class ServletDispatch : public Servlet {
-public:
+ public:
   using sptr = std::shared_ptr<ServletDispatch>;
   using MutexType = RWLock;
-  
+
   ServletDispatch();
-  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp, HttpSession::sptr session) override;
-  
+  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp,
+                         HttpSession::sptr session) override;
+
   void addServlet(const std::string& uri, Servlet::sptr slt);
   void addServlet(const std::string& uri, FunctionServlet::callback cb);
   void addGlobServlet(const std::string& uri, Servlet::sptr slt);
@@ -65,7 +69,8 @@ public:
   Servlet::sptr getGlobServlet(const std::string& uri);
 
   Servlet::sptr getMatchedServlet(const std::string& uri);
-private:
+
+ private:
   //uri(/east/xxx) -> Servlet   精准匹配
   std::unordered_map<std::string, Servlet::sptr> m_datas;
   //uri(/east/*) -> Servlets    模糊匹配
@@ -76,11 +81,12 @@ private:
   MutexType m_mutex;
 };
 
-class NotFoundServlet: public Servlet {
-public:
+class NotFoundServlet : public Servlet {
+ public:
   using sptr = std::shared_ptr<NotFoundServlet>;
   NotFoundServlet();
-  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp, HttpSession::sptr session) override;
+  virtual int32_t handle(HttpReq::sptr req, HttpResp::sptr rsp,
+                         HttpSession::sptr session) override;
 };
-} // namespace Htpp
-} // namespace East
+}  // namespace Http
+}  // namespace East

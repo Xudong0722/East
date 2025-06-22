@@ -13,9 +13,9 @@
 
 namespace East {
 namespace Http {
-    
+
 class HttpReqParser {
-public:
+ public:
   using sptr = std::shared_ptr<HttpReqParser>;
   HttpReqParser();
 
@@ -26,24 +26,25 @@ public:
   HttpReq::sptr getData() const { return m_req; }
   void setError(int v) { m_error = v; }
   uint64_t getContentLength();
-public:
+
+ public:
   static uint64_t GetHttpReqParserBufferSize();
   static uint64_t GetHttpReqMaxBodySize();
 
-private:
+ private:
   HttpReq::sptr m_req;
   http_parser m_parser;
-  int m_error {0};
+  int m_error{0};
   /*
   error code:
   1000: Invalid HTTP method
   1001: Invalid HTTP version
   1002: Invalid HTTP field length
   */
-}; //class HttpReqParser
+};  //class HttpReqParser
 
 class HttpRespParser {
-public:
+ public:
   using sptr = std::shared_ptr<HttpRespParser>;
   HttpRespParser();
   size_t execute(char* data, size_t len, bool chunck);
@@ -55,11 +56,11 @@ public:
   uint64_t getContentLength();
   httpclient_parser& getParser() { return m_parser; }
 
-public:
+ public:
   static uint64_t GetHttpRespParserBufferSize();
   static uint64_t GetHttpRespMaxBodySize();
 
-private:
+ private:
   httpclient_parser m_parser;
   HttpResp::sptr m_resp;
   /*
@@ -69,5 +70,5 @@ private:
   */
   int m_error{0};
 };  //class HttpRespParser
-} //namespace Http
-} //namespace East
+}  //namespace Http
+}  //namespace East

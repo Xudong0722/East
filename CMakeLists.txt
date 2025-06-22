@@ -21,7 +21,7 @@ FetchContent_MakeAvailable(yaml-cpp)
 
 find_library(PTHREAD pthread)
 
-file(GLOB_RECURSE ALL_SOURCE_FILES East/src/*.cc East/include/*.h tests/*.cc)
+file(GLOB_RECURSE ALL_SOURCE_FILES East/src/*.cc East/http/*.cc East/http/*.h East/include/*.h tests/*.cc)
 add_custom_target(
     format
     COMMAND clang-format -i ${ALL_SOURCE_FILES}
