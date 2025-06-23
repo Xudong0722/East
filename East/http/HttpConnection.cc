@@ -7,10 +7,13 @@
 #include <iostream>
 
 #include "../include/util.h"
+#include "../include/Elog.h"
 #include "HttpConnection.h"
 #include "HttpParser.h"
 namespace East {
 namespace Http {
+
+static Logger::sptr g_logger = ELOG_NAME("system");
 
 HttpConnection::HttpConnection(Socket::sptr sock, bool owner)
     : SocketStream(sock, owner) {}
@@ -134,6 +137,8 @@ HttpResult::sptr HttpConnection::DoRequest(HttpMethod method, Uri::sptr uri,
   req->setPath(uri->getPath());
   req->setMethod(method);
   req->setBody(body);
+  req->setQuery(uri->getQuery());
+  req->setFragment(uri->getFragment());
   bool has_host{false};
   for (const auto& item : headers) {
     if (strcasecmp(item.first.c_str(), "connection") == 0) {
@@ -254,13 +259,85 @@ HttpResult::sptr HttpConnection::DoPost(Uri::sptr uri,
 HttpConnectionPool::HttpConnectionPool(const std::string& host,
                                        const std::string& vhost, uint32_t port,
                                        uint32_t maxSize, uint32_t maxAliveTime,
-                                       uint32_t maxRequest) {}
+                                       uint32_t maxRequest) 
+  : m_host(host)
+  , m_vhost(vhost)
+  , m_port(port)
+  , m_maxSize(maxSize)
+  , m_maxAliveTime(maxAliveTime)
+  , m_maxRequest(maxRequest){}
+
+HttpConnection::sptr HttpConnectionPool::getConnection() {
+  uint64_t now = GetCurrentTimeInMs();
+  MutexType::LockGuard lock(m_mutex);
+  std::vector<HttpConnection*> to_delete;
+  HttpConnection* res{nullptr};
+  while(!m_conns.empty()) {
+    auto conn = m_conns.front();
+    if(!conn->isConnected()) {
+      //连接已经断开了
+      to_delete.push_back(conn);
+      m_conns.pop_front();
+      --m_total;
+      continue;
+    }
+    if(conn->getCreateTime() + m_maxAliveTime > now) {
+      //连接过期
+      to_delete.push_back(conn);
+      --m_total;
+      m_conns.pop_front();
+      continue;
+    }
+    
+    res = conn;
+    break;
+  }
+  
+  lock.unlock();
+  for(auto& conn : to_delete) {
+    //释放连接
+    if(conn) {
+      conn->close();
+      delete conn;
+    }
+  }
+
+  if(nullptr == res) {
+    if(m_total >= m_maxSize) {
+      //连接池已满
+      return nullptr;
+    }
+
+    //创建新的连接
+    IPAddress::sptr addr = Address::LookupAnyIPAddress(m_host);
+    if(nullptr == addr) {
+      ELOG_ERROR(g_logger) << "Lookup host failed: " <<m_host;
+      return nullptr;
+    }
+
+    addr->setPort(m_port);
+    Socket::sptr sock = Socket::CreateTCP(addr);
+    if(!sock->connect(addr)) {
+      ELOG_ERROR(g_logger) << "Connect to host failed: " << addr->toString();
+      return nullptr;
+    }
+
+    res = new HttpConnection(sock);
+    ++m_total;
+    res->setCreateTime(GetCurrentTimeInMs());
+  }
+  return HttpConnection::sptr(res, std::bind(&HttpConnectionPool::ReleasePtr, std::placeholders::_1, this));
+}
 
 HttpResult::sptr HttpConnectionPool::doRequest(HttpMethod method, Uri::sptr uri,
                                                const HttpReq::MapType& headers,
                                                const std::string& body,
                                                uint64_t timeout_ms) {
-  return HttpResult::sptr();
+  std::stringstream ss;
+  ss << uri->getPath()
+     << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
+     << (uri->getFragment().empty() ? "" : "#" + uri->getFragment());
+  return doRequest(method, ss.str(), headers, body, timeout_ms);
 }
 
 HttpResult::sptr HttpConnectionPool::doRequest(HttpMethod method,
@@ -268,44 +345,125 @@ HttpResult::sptr HttpConnectionPool::doRequest(HttpMethod method,
                                                const HttpReq::MapType& headers,
                                                const std::string& body,
                                                uint64_t timeout_ms) {
-  return HttpResult::sptr();
+  HttpReq::sptr req = std::make_shared<HttpReq>();
+  req->setPath(url);
+  req->setMethod(method);
+  req->setBody(body);
+  bool has_host{false};
+  for (const auto& item : headers) {
+    if (strcasecmp(item.first.c_str(), "connection") == 0) {
+      if (strcasecmp(item.second.c_str(), "keep-alive") == 0) {
+        req->setClose(false);
+        continue;
+      }
+    }
+
+    if (!has_host && strcasecmp(item.first.c_str(), "host") == 0) {
+      has_host = !item.second.empty();
+    }
+    req->setHeader(item.first, item.second);
+  }
+  if (!has_host) {
+    if(m_vhost.empty()) {
+      req->setHeader("Host", m_host);
+    } else {
+      req->setHeader("Host", m_vhost);
+    }
+  }
+  return doRequest(req, timeout_ms);
 }
 
-HttpResult::sptr HttpConnectionPool::doRequest(HttpReq::sptr req, Uri::sptr uri,
+HttpResult::sptr HttpConnectionPool::doRequest(HttpReq::sptr req,
                                                uint64_t timeout_ms) {
-  return HttpResult::sptr();
+  auto conn = getConnection();
+  if (nullptr == conn) {
+    return std::make_shared<HttpResult>(
+        Enum2Utype(HttpResult::ErrorCode::POOL_GET_CONNECTION_FAIL), nullptr,
+        "Get connection from pool failed: " + m_host + ":" + std::to_string(m_port));
+  }
+  auto sock = conn->getSocket();
+  if (nullptr == sock) {
+    return std::make_shared<HttpResult>(
+        Enum2Utype(HttpResult::ErrorCode::POOL_INVALID_CONNECTION), nullptr,
+        "Invalid connection in pool: " + m_host + ":" + std::to_string(m_port)); 
+  }
+  sock->setRecvTimeout(timeout_ms);
+  auto addr = sock->getRemoteAddr();
+  int rt = conn->sendRequest(req);
+  if (rt == 0) {
+    return std::make_shared<HttpResult>(
+        Enum2Utype(HttpResult::ErrorCode::SEND_CLOSE_BY_PEER), nullptr,
+        "Send close by peer: " + addr->toString());
+  } else if (rt < 0) {
+    return std::make_shared<HttpResult>(
+        Enum2Utype(HttpResult::ErrorCode::SEND_SOCKET_ERROR), nullptr,
+        "Send socket error: " + std::to_string(errno) +
+            " errstr: " + std::string(strerror(errno)));
+  }
+
+  auto resp = conn->recvResponse();
+  if (nullptr == resp) {
+    return std::make_shared<HttpResult>(
+        Enum2Utype(HttpResult::ErrorCode::TIMEOUT), nullptr,
+        "Receive response timeout: " + addr->toString() +
+            " timeout ms: " + std::to_string(timeout_ms));
+  }
+  return std::make_shared<HttpResult>(Enum2Utype(HttpResult::ErrorCode::OK),
+                                      resp,
+                                      "Request success: " + addr->toString());
 }
 
 HttpResult::sptr HttpConnectionPool::doGet(const std::string& url,
                                            const HttpReq::MapType& headers,
                                            const std::string& body,
                                            uint64_t timeout_ms) {
-  return HttpResult::sptr();
+  return doRequest(HttpMethod::GET, url, headers, body, timeout_ms);
 }
 
 HttpResult::sptr HttpConnectionPool::doGet(Uri::sptr uri,
                                            const HttpReq::MapType& headers,
                                            const std::string& body,
                                            uint64_t timeout_ms) {
-  return HttpResult::sptr();
+  std::stringstream ss;
+  ss << uri->getPath()
+     << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
+     << (uri->getFragment().empty() ? "" : "#" + uri->getFragment());
+  return doRequest(HttpMethod::GET, ss.str(), headers, body, timeout_ms);
 }
 
 HttpResult::sptr HttpConnectionPool::doPost(const std::string& url,
                                             const HttpReq::MapType& headers,
                                             const std::string& body,
                                             uint64_t timeout_ms) {
-  return HttpResult::sptr();
+  return doRequest(HttpMethod::POST, url, headers, body, timeout_ms);
 }
 
 HttpResult::sptr HttpConnectionPool::doPost(Uri::sptr uri,
                                             const HttpReq::MapType& headers,
                                             const std::string& body,
                                             uint64_t timeout_ms) {
-  return HttpResult::sptr();
+  std::stringstream ss;
+  ss << uri->getPath()
+     << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
+     << (uri->getFragment().empty() ? "" : "#" + uri->getFragment());
+  return doRequest(HttpMethod::POST, ss.str(), headers, body, timeout_ms);
 }
 
 void HttpConnectionPool::ReleasePtr(HttpConnection* ptr,
-                                    HttpConnectionPool* pool) {}
+                                    HttpConnectionPool* pool) {
+  if(nullptr == ptr || nullptr == pool) return ;
+  //将仍旧可以利用的连接放回连接池
+  if(!ptr->isConnected() 
+     || ptr->getCreateTime() + pool->m_maxAliveTime > GetCurrentTimeInMs()) {
+    //连接已经断开了或者连接过期了
+      ptr->close();
+      delete ptr;
+      --pool->m_total;
+      return ;
+  }
+  MutexType::LockGuard lock(pool->m_mutex);
+  pool->m_conns.push_back(ptr);
+}
 
 }  //namespace Http
 }  //namespace East
