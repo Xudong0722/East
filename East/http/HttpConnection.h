@@ -34,13 +34,16 @@ struct HttpResult {
   int result{0};
   HttpResp::sptr resp;
   std::string error;
+
+  std::string toString() const;
 };
 
 //Connection是client端的概念，而Session是Server端的概念
 class HttpConnection : public SocketStream {
  public:
   using sptr = std::shared_ptr<HttpConnection>;
-
+  ~HttpConnection();
+  
   static HttpResult::sptr DoRequest(HttpMethod method, Uri::sptr uri,
                                     const HttpReq::MapType& headers = {},
                                     const std::string& body = {},
@@ -83,8 +86,11 @@ public:
   void setCreateTime(uint64_t t) { m_createTime = t; }
   uint64_t getCreateTime() const { return m_createTime; }
   
+  void setRequestCount(uint32_t count) { m_requestCount = count; }
+  uint32_t getRequestCount() const { return m_requestCount; }
 private:
   uint64_t m_createTime{0};  //创建时间
+  uint32_t m_requestCount{0};  //请求次数
 };
 
 //对于同一个host，可以复用连接

@@ -15,6 +15,14 @@ namespace Http {
 
 static Logger::sptr g_logger = ELOG_NAME("system");
 
+std::string HttpResult::toString() const {
+  std::stringstream ss;
+  ss << "[HttpResult result=" << result
+     //<< ", resp = " << (resp ? resp->toString() : "nullptr")
+     << ", error = " << error << "]";
+  return ss.str();
+}
+
 HttpConnection::HttpConnection(Socket::sptr sock, bool owner)
     : SocketStream(sock, owner) {}
 
@@ -22,7 +30,7 @@ HttpResp::sptr HttpConnection::recvResponse() {
   HttpRespParser::sptr parser = std::make_shared<HttpRespParser>();
 
   size_t buf_size = HttpRespParser::GetHttpRespParserBufferSize();
-  std::unique_ptr<char[]> buf(new char[buf_size]);
+  std::unique_ptr<char[]> buf(new char[buf_size + 1]);
   int offset = 0;  //当前读到哪里了
   char* data = buf.get();
   do {
@@ -32,6 +40,7 @@ HttpResp::sptr HttpConnection::recvResponse() {
       return nullptr;
     }
     len += offset;  //所有已读数据的长度
+    data[len] = '\0';  //保证字符串结尾
     int parse_len = parser->execute(data, len, false);  //当前已经可以解析的长度
     if (parser->hasError()) {
       close();
@@ -62,6 +71,7 @@ HttpResp::sptr HttpConnection::recvResponse() {
           return nullptr;
         }
         len += rt;
+        data[len] = '\0';  //保证字符串结尾
         size_t parser_len = parser->execute(data, len, true);
         if (parser->hasError()) {
           close();
@@ -127,6 +137,10 @@ int HttpConnection::sendRequest(HttpReq::sptr req) {
   ss << *req;
   std::string data = ss.str();
   return writeFixSize(data.c_str(), data.size());
+}
+
+HttpConnection::~HttpConnection() {
+  ELOG_INFO(g_logger) << "HttpConnection::~HttpConnection()";
 }
 
 HttpResult::sptr HttpConnection::DoRequest(HttpMethod method, Uri::sptr uri,
@@ -274,6 +288,7 @@ HttpConnection::sptr HttpConnectionPool::getConnection() {
   HttpConnection* res{nullptr};
   while(!m_conns.empty()) {
     auto conn = m_conns.front();
+    m_conns.pop_front();
     if(!conn->isConnected()) {
       //连接已经断开了
       to_delete.push_back(conn);
@@ -281,7 +296,7 @@ HttpConnection::sptr HttpConnectionPool::getConnection() {
       --m_total;
       continue;
     }
-    if(conn->getCreateTime() + m_maxAliveTime > now) {
+    if(conn->getCreateTime() + m_maxAliveTime < now) {
       //连接过期
       to_delete.push_back(conn);
       --m_total;
@@ -349,6 +364,7 @@ HttpResult::sptr HttpConnectionPool::doRequest(HttpMethod method,
   req->setPath(url);
   req->setMethod(method);
   req->setBody(body);
+  req->setClose(false);
   bool has_host{false};
   for (const auto& item : headers) {
     if (strcasecmp(item.first.c_str(), "connection") == 0) {
@@ -452,10 +468,23 @@ HttpResult::sptr HttpConnectionPool::doPost(Uri::sptr uri,
 void HttpConnectionPool::ReleasePtr(HttpConnection* ptr,
                                     HttpConnectionPool* pool) {
   if(nullptr == ptr || nullptr == pool) return ;
+  ptr->setRequestCount(ptr->getRequestCount() + 1);
   //将仍旧可以利用的连接放回连接池
+  auto b1 = ptr->isConnected();
+  auto b2 = (ptr->getCreateTime() + pool->m_maxAliveTime) < GetCurrentTimeInMs();
+  auto b3 = ptr->getRequestCount() >= pool->m_maxRequest;
+  ELOG_INFO(g_logger) << "ReleasePtr: isConnected=" << b1
+                       << ", getCreateTime() + m_maxAliveTime > GetCurrentTimeInMs()="
+                       << b2
+                       << "current time=" << GetCurrentTimeInMs()
+                        << ", ptr->getCreateTime()=" << ptr->getCreateTime()
+                        << "maxAliveTime=" << pool->m_maxAliveTime
+                       << ", getRequestCount() >= m_maxRequest=" << b3;
+
   if(!ptr->isConnected() 
-     || ptr->getCreateTime() + pool->m_maxAliveTime > GetCurrentTimeInMs()) {
-    //连接已经断开了或者连接过期了
+     || ((ptr->getCreateTime() + pool->m_maxAliveTime) < GetCurrentTimeInMs())
+     || ptr->getRequestCount() >= pool->m_maxRequest) {
+    //连接已经断开了或者连接过期了，请求次数超过限制了
       ptr->close();
       delete ptr;
       --pool->m_total;

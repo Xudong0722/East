@@ -53,10 +53,19 @@ void run2() {
   ELOG_INFO(g_logger) << "DoGet response: " << *res->resp;
 }
 
+void run3() {
+  East::Http::HttpConnectionPool::sptr pool = 
+    std::make_shared<East::Http::HttpConnectionPool>("www.baidu.com", "www.baidu.com", 80, 10, 30* 1000, 100);
+  
+  East::IOManager::GetThis()->addTimer(1000, [pool]() {
+    auto r = pool->doGet("/", {}, {}, 300);
+    ELOG_INFO(g_logger) << r->toString();
+  }, true);
+}
 int main() {
   East::IOManager iom(2);
   //iom.schedule(run);
-  iom.schedule(run2);
-
+  //iom.schedule(run2);
+  iom.schedule(run3);
   return 0;
 }
