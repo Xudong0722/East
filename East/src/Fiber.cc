@@ -35,10 +35,12 @@ class MallocStackAllocator {
 
 using StackAllocator = MallocStackAllocator;  //you can use other malloc method
 
+//主协程的构造函数, private funcion，只会在GetThis中调用
 Fiber::Fiber() {
   m_state = EXEC;
   SetThis(this);
 
+  //主协程的上下文就是当前运行的上下文
   if (getcontext(&m_ctx)) {
     EAST_ASSERT2(false, "getcontext");
   }
@@ -52,8 +54,9 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool run_in_scheduler)
     : m_id(++s_fiber_id), m_cb(cb), m_run_in_scheduler(run_in_scheduler) {
 
   ++s_fiber_count;
+  //没有指定的话，读配置
   m_stacksize = stack_size != 0 ? stack_size : g_fiber_stack_size->getValue();
-
+  
   m_stack = StackAllocator::Alloc(m_stacksize);
 
   if (getcontext(&m_ctx)) {
@@ -65,11 +68,13 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool run_in_scheduler)
   // } else {
   //   m_ctx.uc_link = &Scheduler::GetMainFiber()->m_ctx;  //diff
   // }
-
+  
+  //这个协程时需要运行我们指定的函数，我们需要申请额外的空间
   m_ctx.uc_link = nullptr;
   m_ctx.uc_stack.ss_sp = m_stack;
   m_ctx.uc_stack.ss_size = m_stacksize;
 
+  //设置协程函数
   makecontext(&m_ctx, &Fiber::MainFunc, 0);
 
   //setState(INIT);
@@ -173,26 +178,12 @@ void Fiber::yield() {
   }
 }
 
-// void Fiber::swapIn() {
-//   SetThis(this);
-//   EAST_ASSERT(m_state != EXEC);
-//   setState(EXEC);
-//   if (swapcontext(&Scheduler::GetMainFiber()->m_ctx, &m_ctx)) {
-//     EAST_ASSERT2(false, "swapcontext:swap in");
-//   }
-// }
-
-// void Fiber::swapOut() {
-//   SetThis(Scheduler::GetMainFiber());
-//   if (swapcontext(&m_ctx, &Scheduler::GetMainFiber()->m_ctx)) {
-//     EAST_ASSERT2(false, "swapcontext:swap out");
-//   }
-// }
-
+//设置当前线程正在运行的协程
 void Fiber::SetThis(Fiber* p) {
   t_fiber = p;
 }
 
+//获取当前线程正在运行的协程，函数的副作用是如果没有协程就创建协程
 Fiber::sptr Fiber::GetThis() {
   if (nullptr != t_fiber) {
     return t_fiber->shared_from_this();
