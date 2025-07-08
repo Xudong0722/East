@@ -317,9 +317,10 @@ bool IOManager::stopping(uint64_t& time_out) {
 }
 
 void IOManager::tickle() {
-  if (!hasIdleThreads())
+  if (!hasIdleThreads()) //如果没有空闲的线程，直接返回，没必要唤醒
     return;
-
+  //我们约定，m_tickleFds[0]是读端，m_tickleFds[1]是发送端，在这里写入数据
+  //其他线程在epoll_wait就可以读取到事件，从而达到唤醒的目的
   int cnt = write(m_tickleFds[1], "t", 1);
   EAST_ASSERT2(cnt == 1, "tickle pipe failed");
 }
