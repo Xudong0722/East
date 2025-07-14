@@ -317,21 +317,23 @@ bool IOManager::stopping(uint64_t& time_out) {
 }
 
 void IOManager::tickle() {
-  if (!hasIdleThreads())
+  if (!hasIdleThreads()) //如果没有空闲的线程，直接返回，没必要唤醒
     return;
-
+  //我们约定，m_tickleFds[0]是读端，m_tickleFds[1]是发送端，在这里写入数据
+  //其他线程在epoll_wait就可以读取到事件，从而达到唤醒的目的
   int cnt = write(m_tickleFds[1], "t", 1);
   EAST_ASSERT2(cnt == 1, "tickle pipe failed");
 }
 
 void IOManager::idle() {
   ELOG_DEBUG(g_logger) << "idle";
-  constexpr uint32_t MAX_EVENTS = 256;
+  constexpr uint32_t MAX_EVENTS = 256; //一次epoll_wait最多处理的事件数
+  //使用智能指针管理epoll_event数组，避免内存泄漏
   std::unique_ptr<epoll_event[]> ep_events(new epoll_event[MAX_EVENTS]);
 
   while (true) {
     uint64_t next_timeout{0};
-    if (stopping(next_timeout)) {
+    if (stopping(next_timeout)) {  //获取下一个定时器的超时时间，同时返回IOManager是否正在停止
 
       ELOG_DEBUG(g_logger) << "IOManager stopping";
       break;
@@ -357,7 +359,7 @@ void IOManager::idle() {
     } while (true);
 
     std::vector<std::function<void()>> timer_cbs{};
-    listExpiredCb(timer_cbs);
+    listExpiredCb(timer_cbs);   //获取所有已经超时的定时器的回调函数
     if (!timer_cbs.empty()) {
       schedule(timer_cbs.begin(),
                timer_cbs.end());  //将符合条件的timer的回调放进去
@@ -367,15 +369,15 @@ void IOManager::idle() {
     ELOG_DEBUG(g_logger) << "idle: epoll wait, res: " << res;
     for (int i = 0; i < res; ++i) {
       epoll_event& event = ep_events[i];
-      if (event.data.fd == m_tickleFds[0]) {
+      if (event.data.fd == m_tickleFds[0]) {  
         uint8_t dummy{};
-        while (read(event.data.fd, &dummy, 1) > 0)
+        while (read(event.data.fd, &dummy, 1) > 0) //如果是被tickle唤醒的，将所有的数据全都读取出来
           ;
         continue;
       }
 
       FdContext* fd_ctx = static_cast<FdContext*>(event.data.ptr);
-      FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
+      FdContext::MutextType::LockGuard lock(fd_ctx->mutex);  //对fd_ctx加锁，防止其他线程在epoll_wait期间修改fd_ctx的状态
       ELOG_DEBUG(g_logger) << "epoll wait, event:" << event.events;
       if (event.events & (EPOLLERR | EPOLLHUP)) {
         event.events |= EPOLLIN | EPOLLOUT;
@@ -398,8 +400,8 @@ void IOManager::idle() {
                            << ", event: " << event.events
                            << ", left_events: " << left_events << ", op: " << op
                            << ", real_events: " << real_events;
-      event.events = left_events | EPOLLET;
-      int res2 = epoll_ctl(m_epfd, op, fd_ctx->fd, &event);
+      event.events = left_events | EPOLLET;  //边缘触发模式
+      int res2 = epoll_ctl(m_epfd, op, fd_ctx->fd, &event);  //将没有处理完的事件继续放进去或者是处理完了就删除掉不再监听
       if (res2 != 0) {
         ELOG_ERROR(g_logger)
             << "epoll_ctl failed, ep fd: " << m_epfd << ", op: " << op
@@ -409,11 +411,11 @@ void IOManager::idle() {
       }
 
       if (real_events & READ) {
-        fd_ctx->triggerEvent(READ);
+        fd_ctx->triggerEvent(READ);  //触发读事件，会将回调函数放入调度器的任务队列中
         --m_pendingEventCount;
       }
       if (real_events & WRITE) {
-        fd_ctx->triggerEvent(WRITE);
+        fd_ctx->triggerEvent(WRITE); //触发写事件，会将回调函数放入调度器的任务队列中
         --m_pendingEventCount;
       }
     }
@@ -422,7 +424,7 @@ void IOManager::idle() {
     cur_fiber.reset();
     ELOG_DEBUG(g_logger) << "ready to yield, cur fiber id: " << raw_ptr->getId()
                          << ", cur fiber state: " << raw_ptr->getState();
-    raw_ptr->yield();
+    raw_ptr->yield();  //将当前协程切换到后台执行，进入调度器协程，开始执行任务
   }
 }
 

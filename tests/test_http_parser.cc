@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-05-28 21:57:16 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-05-28 22:10:48
+ * @Last Modified time: 2025-06-21 17:12:23
  */
 
 #include "../East/http/HttpParser.h"
@@ -51,7 +51,7 @@ const char test_response_data[] =
 void test_response() {
   East::Http::HttpRespParser parser;
   std::string tmp = test_response_data;
-  size_t s = parser.execute(&tmp[0], tmp.size());
+  size_t s = parser.execute(&tmp[0], tmp.size(), false);
 
   ELOG_INFO(g_logger) << "execute rt: " << s
                       << " has error: " << parser.hasError()

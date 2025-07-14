@@ -13,31 +13,31 @@ namespace Http {
 
 static Logger::sptr g_logger = ELOG_NAME("system");
 
-HttpServer::HttpServer(bool keep_alive, East::IOManager* worker, East::IOManager* accept_worker)
-: TcpServer(worker, accept_worker)
-, m_isKeepAlive(keep_alive)
-, m_dispatch(std::make_shared<ServletDispatch>()) {
+HttpServer::HttpServer(bool keep_alive, East::IOManager* worker,
+                       East::IOManager* accept_worker)
+    : TcpServer(worker, accept_worker),
+      m_isKeepAlive(keep_alive),
+      m_dispatch(std::make_shared<ServletDispatch>()) {}
 
-}
-            
 void HttpServer::handleClient(Socket::sptr client) {
   HttpSession::sptr session = std::make_shared<HttpSession>(client);
   do {
     auto req = session->recvRequest();
-    if(nullptr == req) {
-      ELOG_INFO(g_logger) << "recv http request fail, errno: " << errno 
-        << ", strerrno: " << strerror(errno)
-        << ", client: " << *client;
+    if (nullptr == req) {
+      ELOG_INFO(g_logger) << "recv http request fail, errno: " << errno
+                          << ", strerrno: " << strerror(errno)
+                          << ", client: " << *client;
       break;
     }
-    
-    HttpResp::sptr rsp = std::make_shared<HttpResp>(req->getVersion(), req->isClose() || !m_isKeepAlive);
+
+    HttpResp::sptr rsp = std::make_shared<HttpResp>(
+        req->getVersion(), req->isClose() || !m_isKeepAlive);
     m_dispatch->handle(req, rsp, session);
     // rsp->setBody("hello world");
     session->sendResponse(rsp);
-  }while(m_isKeepAlive);
+  } while (m_isKeepAlive);
   session->close();
 }
 
-}//namespace Http
-}//namespace East
+}  //namespace Http
+}  //namespace East

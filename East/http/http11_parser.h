@@ -4,7 +4,7 @@
 
 #include "http11_common.h"
 
-typedef struct http_parser { 
+typedef struct http_parser {
   int cs;
   size_t body_start;
   int content_len;
@@ -16,7 +16,7 @@ typedef struct http_parser {
   int xml_sent;
   int json_sent;
 
-  void *data;
+  void* data;
 
   int uri_relaxed;
   field_cb http_field;
@@ -27,15 +27,16 @@ typedef struct http_parser {
   element_cb query_string;
   element_cb http_version;
   element_cb header_done;
-  
+
 } http_parser;
 
-int http_parser_init(http_parser *parser);
-int http_parser_finish(http_parser *parser);
-size_t http_parser_execute(http_parser *parser, const char *data, size_t len, size_t off);
-int http_parser_has_error(http_parser *parser);
-int http_parser_is_finished(http_parser *parser);
+int http_parser_init(http_parser* parser);
+int http_parser_finish(http_parser* parser);
+size_t http_parser_execute(http_parser* parser, const char* data, size_t len,
+                           size_t off);
+int http_parser_has_error(http_parser* parser);
+int http_parser_is_finished(http_parser* parser);
 
-#define http_parser_nread(parser) (parser)->nread 
+#define http_parser_nread(parser) (parser)->nread
 
 #endif

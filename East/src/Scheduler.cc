@@ -16,7 +16,7 @@ static East::Logger::sptr g_logger = ELOG_NAME("system");
 static thread_local Scheduler* t_scheduler =
     nullptr;  //当前线程的调度器，同一个调度器下的所有线程指向同一个调度器
 static thread_local Fiber* t_scheduler_fiber =
-    nullptr;  //当前线程的调度协程，每个协程都独有一个，包括caller线程
+    nullptr;  //当前线程的调度协程，每个线程都独有一个，包括caller线程
 std::atomic<int32_t> Scheduler::s_task_id{0};  //任务id
 
 Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
@@ -119,6 +119,7 @@ void Scheduler::stop() {
     }
   }
 
+  //不要在持锁的情况下调用join，否则可能会死锁
   std::vector<Thread::sptr> tmp_threads;
   {
     MutexType::LockGuard lock(m_mutex);
