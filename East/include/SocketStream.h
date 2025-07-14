@@ -7,13 +7,13 @@
 
 #pragma once
 
-#include "Stream.h"
 #include "Socket.h"
+#include "Stream.h"
 
 namespace East {
-    
-class SocketStream: public Stream{
-public:
+
+class SocketStream : public Stream {
+ public:
   using sptr = std::shared_ptr<SocketStream>;
   SocketStream(Socket::sptr sock, bool owner = true);
   ~SocketStream();
@@ -26,8 +26,9 @@ public:
 
   Socket::sptr getSocket() const;
   bool isConnected() const;
-private:
+
+ private:
   Socket::sptr m_socket;
   bool m_owner{true};
 };
-} // namespace East
+}  // namespace East

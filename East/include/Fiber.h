@@ -61,13 +61,13 @@ class Fiber
   static void MainFunc();
 
  private:
-  uint64_t m_id{0};         //协程id
-  uint32_t m_stacksize{0};  //协程栈大小
-  State m_state{INIT};
-  ucontext_t m_ctx;
-  void* m_stack{nullptr};
-  std::function<void()> m_cb;
-  bool m_run_in_scheduler{false};
+  uint64_t m_id{0};                //协程id
+  uint32_t m_stacksize{0};         //协程栈大小
+  State m_state{INIT};             //协程的状态
+  ucontext_t m_ctx;                //协程存储的上下文
+  void* m_stack{nullptr};          //协程额外的栈空间
+  std::function<void()> m_cb;      //协程的入口函数
+  bool m_run_in_scheduler{false};  //协程是否运行在调度器中
 };
 
 }  // namespace East

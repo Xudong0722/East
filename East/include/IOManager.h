@@ -68,11 +68,11 @@ class IOManager : public Scheduler, public TimerManager {
   void onTimerInsertAtFront() override;
 
  private:
-  int m_epfd{-1};
-  int m_tickleFds[2];
+  int m_epfd{-1};      //调度线程创建的epoll fd
+  int m_tickleFds[2];  //pipe，用于唤醒其他线程
 
-  std::atomic<size_t> m_pendingEventCount{0};
+  std::atomic<size_t> m_pendingEventCount{0};  //剩余的事件数目
   RWMutexType m_mutex;
-  std::vector<FdContext*> m_fdContexts;
+  std::vector<FdContext*> m_fdContexts;  //存放所有的fd上下文
 };
 }  // namespace East

@@ -11,6 +11,8 @@
 #include "singleton.h"
 
 namespace East {
+
+//封装了fd，因为我们要hook io相关函数，我们要知道用户是否设置过非阻塞fd，所以将这些信息封装在一个class中
 class FileDescriptor : public std::enable_shared_from_this<FileDescriptor> {
  public:
   using sptr = std::shared_ptr<FileDescriptor>;
@@ -48,6 +50,7 @@ class FileDescriptor : public std::enable_shared_from_this<FileDescriptor> {
   uint64_t m_sendTimeout;
 };
 
+//存放所有的FileDescriptor，支持删除获取和添加
 class FdManager : public noncopymoveable {
  public:
   using RWMutexType = RWLock;
