@@ -18,11 +18,27 @@ namespace East {
 
 East::Logger::sptr g_logger = ELOG_NAME("system");
 
+/**
+ * @brief 创建指定位数的掩码
+ * @tparam T 掩码类型
+ * @param bits 掩码位数
+ * @return 对应的掩码值
+ * 
+ * 例如：CreateMask<uint32_t>(24) 返回 0xFF000000
+ */
 template <class T>
 static T CreateMask(uint32_t bits) {
   return (1 << (sizeof(T) * 8 - bits)) - 1;  //TODO
 }
 
+/**
+ * @brief 计算一个值中1的位数
+ * @tparam T 值类型
+ * @param val 要计算的值
+ * @return 1的位数
+ * 
+ * 使用Brian Kernighan算法，每次清除最低位的1
+ */
 template <class T>
 static uint32_t CountBitIsOne(T val) {
   uint32_t cnt{0};
@@ -38,6 +54,7 @@ Address::sptr Address::Create(const sockaddr* addr, socklen_t addrlen) {
   if (nullptr == addr)
     return address;
 
+  // 根据地址族类型创建对应的Address对象
   switch (addr->sa_family) {
     case AF_INET:
       address = std::make_shared<IPV4Address>(*(sockaddr_in*)addr);
@@ -56,6 +73,7 @@ bool Address::Lookup(std::vector<Address::sptr>& result,
                      const std::string& host, int family, int type,
                      int protocol) {
   addrinfo hints, *results, *next;
+  // 初始化地址信息提示结构
   hints.ai_flags = 0;
   hints.ai_family = family;
   hints.ai_protocol = protocol;
@@ -68,7 +86,7 @@ bool Address::Lookup(std::vector<Address::sptr>& result,
   std::string node;
   const char* service{nullptr};
 
-  //check ipv6， [....]:80
+  // 检查IPv6地址格式：[....]:80
   if (!host.empty() && host[0] == '[') {
     const char* endipv6 =
         (const char*)memchr(host.c_str() + 1, ']', host.size() - 1);
@@ -80,7 +98,7 @@ bool Address::Lookup(std::vector<Address::sptr>& result,
     }
   }
 
-  //ipv4:port 或 domain:port形式
+  // IPv4地址格式：ip:port 或域名:port形式
   if (node.empty()) {
     service = (const char*)memchr(host.c_str(), ':', host.size() - 1);
     if (nullptr != service) {
@@ -97,6 +115,7 @@ bool Address::Lookup(std::vector<Address::sptr>& result,
     node = host;
   }
 
+  // 使用getaddrinfo进行地址解析
   int error =
       getaddrinfo(node.c_str(), service, &hints, &results);  //resulst是一个链表
   if (error) {
@@ -107,6 +126,7 @@ bool Address::Lookup(std::vector<Address::sptr>& result,
     return false;
   }
 
+  // 遍历所有解析结果，创建对应的Address对象
   next = results;
   while (next) {
     result.emplace_back(Create(next->ai_addr, next->ai_addrlen));
@@ -122,7 +142,7 @@ Address::sptr Address::LookupAny(const std::string& host, int family, int type,
                                  int protocol) {
   std::vector<Address::sptr> result{};
   if (Lookup(result, host, family, type, protocol)) {
-    return result[0];
+    return result[0];  // 返回第一个找到的地址
   }
   return nullptr;
 }
@@ -132,6 +152,7 @@ std::shared_ptr<IPAddress> Address::LookupAnyIPAddress(const std::string& host,
                                                        int protocol) {
   std::vector<Address::sptr> result{};
   if (Lookup(result, host, family, type, protocol)) {
+    // 查找第一个IP地址类型的地址
     for (auto& item : result) {
       IPAddress::sptr v = std::dynamic_pointer_cast<IPAddress>(item);
       if (nullptr != v) {
@@ -154,10 +175,13 @@ bool Address::GetInterfaceAddresses(
 
   try {
     for (next = results; next; next = next->ifa_next) {
+      // 过滤指定地址族的接口
       if (family != AF_UNSPEC && family != next->ifa_addr->sa_family)
         continue;
+      
       Address::sptr addr{nullptr};
       uint32_t prefix_len = ~0u;
+      
       switch (next->ifa_addr->sa_family) {
         case AF_INET: {
           addr = Create(next->ifa_addr, sizeof(sockaddr_in));
@@ -173,7 +197,6 @@ bool Address::GetInterfaceAddresses(
           }
         } break;
         default:
-          break;
           break;
       }
 
@@ -193,6 +216,7 @@ bool Address::GetInterfaceAddresses(
 bool Address::GetInterfaceAddresses(
     std::vector<std::pair<Address::sptr, uint32_t>>& result,
     const std::string& iface, int family) {
+  // 如果接口名为空或"*"，返回所有接口的地址
   if (iface.empty() || iface == "*") {
     if (family == AF_INET || family == AF_INET) {
       result.emplace_back(std::make_pair(std::make_shared<IPV4Address>(), 0));
@@ -203,6 +227,7 @@ bool Address::GetInterfaceAddresses(
     return true;
   }
 
+  // 获取所有接口地址，然后过滤指定接口
   std::multimap<std::string, std::pair<Address::sptr, uint32_t>> results;
   if (!GetInterfaceAddresses(results, family)) {
     return false;
@@ -226,6 +251,7 @@ std::string Address::toString() const {
 }
 
 bool Address::operator<(const Address& rhs) const {
+  // 先比较地址内容，再比较地址长度
   socklen_t min_len = std::min(getAddrLen(), rhs.getAddrLen());
   int res = memcmp(getAddr(), rhs.getAddr(), min_len);
   if (res < 0) {
@@ -250,11 +276,13 @@ bool Address::operator!=(const Address& rhs) const {
 IPAddress::sptr IPAddress::Create(const char* address, uint16_t port) {
   if (nullptr == address)
     return nullptr;
+  
   addrinfo hints, *results;
   memset(&hints, 0, sizeof(hints));
   hints.ai_flags = 0;
   hints.ai_family = AF_UNSPEC;
 
+  // 解析地址字符串
   int error =
       getaddrinfo(address, nullptr, &hints, &results);  //resulst是一个链表
   if (error) {
@@ -279,7 +307,7 @@ IPAddress::sptr IPAddress::Create(const char* address, uint16_t port) {
   return result;
 }
 
-//IPV4
+// IPv4地址实现
 IPV4Address::IPV4Address(const sockaddr_in& addr) {
   m_addr = addr;
 }
@@ -294,6 +322,7 @@ IPV4Address::IPV4Address(uint32_t address, uint16_t port) {
 IPV4Address::sptr IPV4Address::Create(const char* address, uint16_t port) {
   if (nullptr == address)
     return nullptr;
+  
   IPV4Address::sptr addr = std::make_shared<IPV4Address>();
   int res = inet_pton(AF_INET, address, &addr->m_addr.sin_addr);
   if (res != 1) {
@@ -314,6 +343,7 @@ socklen_t IPV4Address::getAddrLen() const {
 }
 
 std::ostream& IPV4Address::dump(std::ostream& os) const {
+  // 将网络字节序转换为主机字节序进行显示
   uint32_t addr = byteswapOnLittleEndian(m_addr.sin_addr.s_addr);
   os << ((addr >> 24) & 0xff) << "." << ((addr >> 16) & 0xff) << "."
      << ((addr >> 8) & 0xff) << "." << (addr & 0xff) << ":"
@@ -321,24 +351,25 @@ std::ostream& IPV4Address::dump(std::ostream& os) const {
   return os;
 }
 
-//	192.168.1.255， 这是一个广播地址，发送给192.168.1.0这个子网上的所有主机
+// 计算广播地址：192.168.1.255，发送给192.168.1.0这个子网上的所有主机
 IPAddress::sptr IPV4Address::getBroadcastAddr(uint32_t prefix_len) const {
-  //发送给某个某段上所有的主机
   if (prefix_len > 32) {
     return nullptr;
   }
   sockaddr_in broadcast_addr(m_addr);
+  // 广播地址 = 网络地址 | 掩码
   broadcast_addr.sin_addr.s_addr |= byteswapOnLittleEndian(
-      CreateMask<uint32_t>(prefix_len));  //广播地址 = 网络地址 | 掩码
+      CreateMask<uint32_t>(prefix_len));
   return std::make_shared<IPV4Address>(broadcast_addr);
 }
 
-//	192.168.1.0这就是一个子网地址，对应的广播地址是192.168.1.255
+// 计算网络地址：192.168.1.0这就是一个子网地址，对应的广播地址是192.168.1.255
 IPAddress::sptr IPV4Address::getNetworkAddr(uint32_t prefix_len) const {
   if (prefix_len > 32) {
     return nullptr;
   }
   sockaddr_in network_addr(m_addr);
+  // 网络地址 = 主机地址 & (~掩码)
   network_addr.sin_addr.s_addr &=
       byteswapOnLittleEndian(~CreateMask<uint32_t>(prefix_len));
   return std::make_shared<IPV4Address>(network_addr);
@@ -348,6 +379,7 @@ IPAddress::sptr IPV4Address::getSubnetMask(uint32_t prefix_len) const {
   sockaddr_in subnet_mask;
   memset(&subnet_mask, 0, sizeof(subnet_mask));
   subnet_mask.sin_family = AF_INET;
+  // 子网掩码 = ~(前缀掩码)
   subnet_mask.sin_addr.s_addr =
       ~byteswapOnLittleEndian(CreateMask<uint32_t>(prefix_len));
   return std::make_shared<IPV4Address>(subnet_mask);
@@ -361,7 +393,7 @@ void IPV4Address::setPort(uint16_t port) {
   m_addr.sin_port = byteswapOnLittleEndian(port);
 }
 
-//IPV6
+// IPv6地址实现
 IPV6Address::IPV6Address() {
   memset(&m_addr, 0, sizeof(m_addr));
 }
@@ -380,6 +412,7 @@ IPV6Address::IPV6Address(const char* address, uint16_t port) {
 IPV6Address::sptr IPV6Address::Create(const char* address, uint32_t port) {
   if (nullptr == address)
     return nullptr;
+  
   IPV6Address::sptr addr = std::make_shared<IPV6Address>();
   int res = inet_pton(AF_INET, address, &addr->m_addr.sin6_addr);
   if (res != 1) {
@@ -401,9 +434,12 @@ socklen_t IPV6Address::getAddrLen() const {
 
 std::ostream& IPV6Address::dump(std::ostream& os) const {
   os << "[";
+  // 将uint8_t[16]转换为8个uint16_t进行处理
   uint16_t* addr =
-      (uint16_t*)&m_addr.sin6_addr.s6_addr;  //uint8_t[16] -> 8个uint16_t
+      (uint16_t*)&m_addr.sin6_addr.s6_addr;
   bool used_zeros{false};
+  
+  // 处理IPv6地址的压缩表示（省略连续的0）
   for (int i = 0; i < 8; ++i) {
     if (addr[i] == 0 && !used_zeros) {
       continue;
@@ -426,7 +462,7 @@ std::ostream& IPV6Address::dump(std::ostream& os) const {
 }
 
 IPAddress::sptr IPV6Address::getBroadcastAddr(uint32_t prefix_len) const {
-  //TODO
+  // TODO: IPv6广播地址实现
   sockaddr_in6 broadcast_addr(m_addr);
   broadcast_addr.sin6_addr.s6_addr[prefix_len / 8] |=
       CreateMask<uint8_t>(prefix_len % 8);
@@ -437,7 +473,7 @@ IPAddress::sptr IPV6Address::getBroadcastAddr(uint32_t prefix_len) const {
 }
 
 IPAddress::sptr IPV6Address::getNetworkAddr(uint32_t prefix_len) const {
-  //TODO
+  // TODO: IPv6网络地址实现
   sockaddr_in6 network_addr(m_addr);
   network_addr.sin6_addr.s6_addr[prefix_len / 8] |=
       CreateMask<uint8_t>(prefix_len % 8);
@@ -448,7 +484,7 @@ IPAddress::sptr IPV6Address::getNetworkAddr(uint32_t prefix_len) const {
 }
 
 IPAddress::sptr IPV6Address::getSubnetMask(uint32_t prefix_len) const {
-  //TODO
+  // TODO: IPv6子网掩码实现
   sockaddr_in6 subnet;
   memset(&subnet, 0, sizeof(subnet));
   subnet.sin6_family = AF_INET6;
@@ -469,8 +505,7 @@ void IPV6Address::setPort(uint16_t port) {
   m_addr.sin6_port = byteswapOnLittleEndian(port);
 }
 
-//UnixAddress
-
+// Unix域套接字地址实现
 static constexpr size_t MAX_PATH_LEN =
     sizeof(((sockaddr_un*)0)->sun_path) - 1;  //不会解引用，sizeof在编译器计算
 
@@ -479,6 +514,7 @@ UnixAddress::UnixAddress() {
   m_addr.sun_family = AF_UNIX;
   m_length = offsetof(sockaddr_un, sun_path) + MAX_PATH_LEN;
 }
+
 UnixAddress::UnixAddress(const std::string& path) {
   memset(&m_addr, 0, sizeof(m_addr));
   m_addr.sun_family = AF_UNIX;
@@ -494,7 +530,6 @@ UnixAddress::UnixAddress(const std::string& path) {
   m_length += offsetof(sockaddr_un, sun_path);
 }
 
-//Address
 const sockaddr* UnixAddress::getAddr() const {
   return (sockaddr*)&m_addr;
 }
@@ -510,7 +545,7 @@ void UnixAddress::setAddrLen(uint32_t len) {
 std::ostream& UnixAddress::dump(std::ostream& os) const {
   if (m_length > offsetof(sockaddr_un, sun_path) &&
       m_addr.sun_path[0] == '\0') {
-    //abstract socket, start with '\0'
+    // 抽象套接字，以'\0'开头
     return os << "\\0"
               << std::string(m_addr.sun_path + 1,
                              m_length - offsetof(sockaddr_un, sun_path) - 1);
@@ -518,7 +553,7 @@ std::ostream& UnixAddress::dump(std::ostream& os) const {
   return os << m_addr.sun_path;
 }
 
-//UnknownAddress
+// 未知类型地址实现
 UnknownAddress::UnknownAddress(int family) {
   memset(&m_addr, 0, sizeof(m_addr));
   m_addr.sa_family = family;
@@ -544,4 +579,5 @@ std::ostream& UnknownAddress::dump(std::ostream& os) const {
 std::ostream& operator<<(std::ostream& os, const Address& addr) {
   return addr.dump(os);
 }
+
 }  // namespace East
