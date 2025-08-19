@@ -304,12 +304,6 @@ make test
 - [日志模块详细说明](https://xudong0722.github.io/2025/05/22/East-Log-Module/)
 - [项目博客](https://xudong0722.github.io/)
 
-## 📞 联系方式
-
-- 作者: Xudong0722
-- 项目地址: [GitHub Repository]
-- 问题反馈: [GitHub Issues]
-
 ---
 
 **East** - 构建高性能服务器的现代C++框架

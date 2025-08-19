@@ -11,14 +11,49 @@
 
 namespace East {
 
+/**
+ * @brief 系统日志记录器，用于记录调度器的运行日志
+ */
 static East::Logger::sptr g_logger = ELOG_NAME("system");
 
+/**
+ * @brief 线程本地存储：当前线程的调度器指针
+ * 
+ * 同一个调度器下的所有线程都指向同一个调度器实例，
+ * 用于在协程切换时获取当前线程的调度器上下文。
+ */
 static thread_local Scheduler* t_scheduler =
-    nullptr;  //当前线程的调度器，同一个调度器下的所有线程指向同一个调度器
-static thread_local Fiber* t_scheduler_fiber =
-    nullptr;  //当前线程的调度协程，每个线程都独有一个，包括caller线程
-std::atomic<int32_t> Scheduler::s_task_id{0};  //任务id
+    nullptr;
 
+/**
+ * @brief 线程本地存储：当前线程的调度协程指针
+ * 
+ * 每个线程都有自己独立的调度协程，包括调用者线程。
+ * 用于管理协程的调度和切换。
+ */
+static thread_local Fiber* t_scheduler_fiber =
+    nullptr;  
+
+/**
+ * @brief 全局任务ID计数器
+ * 
+ * 为每个任务分配唯一的递增ID，用于调试、日志记录和任务跟踪。
+ */
+std::atomic<int32_t> Scheduler::s_task_id{0};
+
+/**
+ * @brief 构造函数实现
+ * 
+ * 初始化调度器的核心组件和状态：
+ * 1. 验证线程数量参数的有效性
+ * 2. 根据use_caller参数决定是否使用调用者线程
+ * 3. 如果使用调用者线程，创建主协程并设置线程本地存储
+ * 4. 初始化线程计数和ID管理
+ * 
+ * @param threads 工作线程数量（不包括调用者线程）
+ * @param use_caller 是否使用调用者线程参与调度
+ * @param name 调度器名称
+ */
 Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
     : m_name(name) {
   EAST_ASSERT2(threads > 0, "threads must be at least 1");
@@ -46,6 +81,12 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
   m_threadCount = threads;
 }
 
+/**
+ * @brief 析构函数实现
+ * 
+ * 确保调度器已经停止，并清理线程本地存储。
+ * 防止在调度器运行期间意外销毁对象。
+ */
 Scheduler::~Scheduler() {
   EAST_ASSERT(m_stopping);
   if (GetThis() == this) {
@@ -53,20 +94,41 @@ Scheduler::~Scheduler() {
   }
 }
 
-//获取当前线程的协程调度器
+/**
+ * @brief 获取当前线程的协程调度器
+ * @return 当前线程关联的调度器指针，如果没有则返回nullptr
+ */
 Scheduler* Scheduler::GetThis() {
   return t_scheduler;
 }
 
-//获取当前协程调度器的主协程
+/**
+ * @brief 获取当前协程调度器的主协程
+ * @return 主协程指针，用于协程切换
+ */
 Fiber* Scheduler::GetMainFiber() {
   return t_scheduler_fiber;
 }
 
+/**
+ * @brief 设置当前线程的协程调度器
+ * @param p 要设置的调度器指针
+ */
 void Scheduler::SetThis(Scheduler* p) {
   t_scheduler = p;
 }
 
+/**
+ * @brief 启动调度器
+ * 
+ * 核心启动逻辑：
+ * 1. 检查调度器是否已经启动，避免重复启动
+ * 2. 设置停止标志为false，允许任务执行
+ * 3. 创建指定数量的工作线程，每个线程都执行run方法
+ * 4. 记录所有线程的ID，用于后续管理和调试
+ * 
+ * 注意：此方法需要线程安全，使用互斥锁保护共享状态。
+ */
 void Scheduler::start() {
   MutexType::LockGuard lock(m_mutex);
 
@@ -83,7 +145,19 @@ void Scheduler::start() {
   }
 }
 
-//停止调度器, 确保所有任务都处理完毕，同时要避免内存泄漏
+/**
+ * @brief 停止调度器
+ * 
+ * 优雅停止的核心逻辑：
+ * 1. 设置自动停止标志，通知所有线程准备停止
+ * 2. 检查根协程状态，如果已经完成则直接停止
+ * 3. 设置停止标志，防止新任务继续执行
+ * 4. 唤醒所有工作线程，让它们检查停止条件
+ * 5. 如果根协程存在且调度器未停止，执行一次run方法
+ * 6. 等待所有工作线程完成并清理资源
+ * 
+ * 关键设计：避免在持锁情况下调用join，防止死锁。
+ */
 void Scheduler::stop() {
   ELOG_DEBUG(g_logger) << "enter Scheduler::stop";
   m_autoStop = true;
@@ -131,6 +205,39 @@ void Scheduler::stop() {
   }
 }
 
+/**
+ * @brief 调度器主运行循环
+ * 
+ * 这是每个工作线程的核心执行逻辑，包含以下关键步骤：
+ * 
+ * 1. **初始化阶段**：
+ *    - 设置当前线程的调度器上下文
+ *    - 启用hook功能，支持协程友好的系统调用
+ *    - 设置调度协程指针
+ *    - 创建空闲协程和回调协程
+ * 
+ * 2. **任务调度循环**：
+ *    - 从任务队列中取出可执行的任务
+ *    - 处理线程亲和性（指定线程执行）
+ *    - 跳过已在执行或无效的协程
+ *    - 更新活跃线程计数
+ * 
+ * 3. **任务执行**：
+ *    - 协程任务：检查状态并执行，处理完成后根据状态决定是否重新调度
+ *    - 函数任务：使用专用协程执行，支持重用协程对象
+ *    - 空闲处理：当没有任务时执行空闲协程
+ * 
+ * 4. **状态管理**：
+ *    - 协程状态转换：READY -> EXEC -> HOLD/TERM/EXCEPT
+ *    - 线程计数管理：活跃线程和空闲线程的统计
+ *    - 优雅退出：检查停止条件并退出循环
+ * 
+ * 关键设计特点：
+ * - 支持协程和函数两种任务类型
+ * - 智能的任务重新调度机制
+ * - 避免协程对象重复创建
+ * - 线程安全的队列操作
+ */
 void Scheduler::run() {
   ELOG_DEBUG(g_logger) << "run";
   SetThis(this);
@@ -252,14 +359,42 @@ void Scheduler::run() {
   }
 }
 
+/**
+ * @brief 检查是否有空闲线程
+ * @return 有空闲线程返回true，否则返回false
+ * 
+ * 通过检查空闲线程计数器来判断当前是否有线程处于空闲状态。
+ * 这个信息可以用于负载均衡和性能监控。
+ */
 bool Scheduler::hasIdleThreads() {
   return m_idleThreadCount > 0;
 }
 
+/**
+ * @brief 唤醒其他线程的虚函数
+ * 
+ * 默认实现只是记录日志。子类可以重写此方法实现特定的唤醒机制，
+ * 比如使用条件变量、信号量或管道等机制来唤醒等待的线程。
+ * 
+ * 当有新任务添加时，调度器会调用此方法来通知可能处于空闲状态的线程。
+ */
 void Scheduler::tickle() {
   ELOG_DEBUG(g_logger) << "tickle";
 }
 
+/**
+ * @brief 空闲处理协程的虚函数
+ * 
+ * 当线程没有可执行任务时，会执行此协程。默认实现：
+ * 1. 在循环中检查调度器是否应该停止
+ * 2. 如果不应该停止，则让出执行权给其他协程
+ * 3. 使用YieldToHold让协程进入HOLD状态，等待被重新调度
+ * 
+ * 子类可以重写此方法实现特定的空闲处理逻辑，比如：
+ * - 执行后台清理任务
+ * - 进行性能统计
+ * - 处理定时器事件
+ */
 void Scheduler::idle() {
   ELOG_DEBUG(g_logger) << "idle";
   while (!stopping()) {
@@ -267,6 +402,19 @@ void Scheduler::idle() {
   }
 }
 
+/**
+ * @brief 检查调度器是否应该停止的虚函数
+ * @return 应该停止返回true，否则返回false
+ * 
+ * 停止条件检查逻辑：
+ * 1. 自动停止标志已设置（m_autoStop = true）
+ * 2. 停止标志已设置（m_stopping = true）
+ * 3. 任务队列为空（m_tasks.empty()）
+ * 4. 没有活跃线程（m_activeThreadCount == 0）
+ * 
+ * 只有同时满足以上四个条件，调度器才会真正停止。
+ * 这种设计确保了所有任务都能被正确处理完成。
+ */
 bool Scheduler::stopping() {
   MutexType::LockGuard lock(m_mutex);
   return m_autoStop && m_stopping && m_tasks.empty() &&
