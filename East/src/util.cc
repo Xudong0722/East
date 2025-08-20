@@ -2,12 +2,14 @@
  * @Author: Xudong0722
  * @Date: 2025-03-03 14:42:56
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-04-06 16:38:35
+ * @Last Modified time: 2025-08-21 00:31:31
  */
 
 #include <execinfo.h>
 #include <sys/time.h>
 #include <sstream>
+#include <chrono>
+#include <iomanip>
 
 #include "Elog.h"
 #include "Fiber.h"
@@ -77,5 +79,15 @@ uint64_t GetCurrentTimeInUs() {
   timespec ts{};
   ::clock_gettime(CLOCK_REALTIME, &ts);
   return static_cast<uint64_t>(ts.tv_sec) * 1000000 | ts.tv_nsec / 1000;
+}
+
+std::string TimeSinceEpochToString(uint64_t tm) {
+  using namespace std::chrono;
+  std::time_t t = static_cast<std::time_t>(tm);
+  std::tm tm_local;
+  localtime_r(&t, &tm_local);
+  std::stringstream ss;
+  ss << std::put_time(&tm_local, "%Y-%m-%d %H:%M:%S");
+  return ss.str();
 }
 }  // namespace East

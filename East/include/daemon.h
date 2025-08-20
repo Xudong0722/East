@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-08-20 21:03:23 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-08-20 21:10:43
+ * @Last Modified time: 2025-08-21 00:31:16
  */
 
 #pragma once
@@ -19,6 +19,8 @@ struct ProcessInfo {
   uint64_t parent_start_time{0u};  //父进程启动的时间
   uint64_t main_start_time{0u}; //主进程启动的时间
   uint32_t restart_count{0u};  //主进程重启的次数
+
+  std::string to_str() const;
 };
 
 using ProcessInfoMgr = East::Singleton<ProcessInfo>;

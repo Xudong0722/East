@@ -2,7 +2,7 @@
  * @Author: Xudong0722
  * @Date: 2025-03-03 14:42:59
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-06-22 13:57:12
+ * @Last Modified time: 2025-08-21 00:32:05
  */
 
 #pragma once
@@ -30,6 +30,8 @@ uint64_t GetCurrentTimeInMs();
 
 //get current time(us)
 uint64_t GetCurrentTimeInUs();
+
+std::string TimeSinceEpochToString(uint64_t tm);
 
 template <typename T>
 auto Enum2Utype(T e) -> std::underlying_type_t<T> {
