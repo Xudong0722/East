@@ -31,6 +31,7 @@ set(DIR_LIB_SRCS
     src/Timer.cc 
     src/util.cc 
     src/TcpServer.cc
+    src/daemon.cc
     http/Http.cc
     # http/http11_parser.rl.cc 
     # http/httpclient_parser.rl.cc
