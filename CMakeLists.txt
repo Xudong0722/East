@@ -11,13 +11,19 @@ set(CMAKE_C_FLAGS "$ENV{CXXFLAGS} -fPIC -rdynamic -g -std=c11 -Wall -Wno-depreca
 
 #include_directories(${PROJECT_SOURCE_DIR}/East/thirdparty/include)
 
-include(FetchContent)
-FetchContent_Declare(
-    yaml-cpp 
-    GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git 
-    GIT_TAG master
-)
-FetchContent_MakeAvailable(yaml-cpp)
+find_package(yaml-cpp QUIET)
+
+if (NOT yaml-cpp_FOUND)
+    message(STATUS "yaml-cpp not found locally, fetching from GitHub...")
+    include(FetchContent)
+    FetchContent_Declare(
+        yaml-cpp 
+        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git 
+        GIT_TAG master
+    )
+    FetchContent_MakeAvailable(yaml-cpp)
+endif()
+
 
 find_library(PTHREAD pthread)
 
@@ -93,6 +99,9 @@ target_link_libraries(test_http_connection "${LIBS}")
 
 add_executable(test_uri tests/test_uri.cc)
 target_link_libraries(test_uri "${LIBS}")
+
+add_executable(test_daemon tests/test_daemon.cc)
+target_link_libraries(test_daemon "${LIBS}")
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
