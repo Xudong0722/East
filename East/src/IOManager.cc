@@ -65,14 +65,14 @@ void IOManager::FdContext::triggerEvent(IOManager::Event event) {
   // 事件触发后从监听列表中移除
   events = (Event)(events & ~event);
   EventContext& event_ctx = getContext(event);
-  
+
   // 优先执行回调函数，如果没有回调函数则执行协程
   if (event_ctx.cb) {
     event_ctx.scheduler->schedule(&event_ctx.cb);
   } else if (event_ctx.fiber) {
     event_ctx.scheduler->schedule(&event_ctx.fiber);
   }
-  
+
   // 清空上下文信息
   event_ctx.scheduler = nullptr;
   return;
@@ -137,7 +137,7 @@ IOManager::~IOManager() {
   close(m_tickleFds[0]);
   close(m_tickleFds[1]);
   m_epfd = m_tickleFds[0] = m_tickleFds[1] = -1;
-  
+
   // 释放所有文件描述符上下文
   for (size_t i = 0; i < m_fdContexts.size(); ++i) {
     delete m_fdContexts[i];
@@ -159,7 +159,7 @@ IOManager::~IOManager() {
  */
 int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
   FdContext* fd_ctx{nullptr};
-  
+
   // 首先尝试读锁获取文件描述符上下文
   RWMutexType::RLockGuard lock(m_mutex);
   if ((int)m_fdContexts.size() > fd) {
@@ -172,14 +172,14 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     SafeContextResize(fd * 1.5);
     fd_ctx = m_fdContexts[fd];
   }
-  
+
   ELOG_DEBUG(g_logger) << "epfd: " << m_epfd << ", fd: " << fd
                        << ", event: " << event
                        << ", fd event: " << fd_ctx->events;
-  
+
   // 对文件描述符上下文加锁
   FdContext::MutextType::LockGuard lock2(fd_ctx->mutex);
-  
+
   // 检查是否已经监听该事件类型
   if (fd_ctx->events & event) {
     ELOG_ERROR(g_logger) << "Assert- addEvent, fd: " << fd
@@ -210,7 +210,7 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
   // 更新事件计数和监听事件类型
   ++m_pendingEventCount;
   fd_ctx->events = static_cast<Event>(fd_ctx->events | event);
-  
+
   // 设置事件上下文
   FdContext::EventContext& event_ctx = fd_ctx->getContext(event);
   EAST_ASSERT(!event_ctx.cb && !event_ctx.fiber && !event_ctx.scheduler);
@@ -221,7 +221,7 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
   } else {
     event_ctx.fiber = Fiber::GetThis();  // TODO: 使用当前协程
   }
-  
+
   ELOG_DEBUG(g_logger) << __FUNCTION__ << "epfd: " << m_epfd << ", fd: " << fd
                        << ", event: " << event
                        << ", fd event: " << fd_ctx->events;
@@ -251,7 +251,7 @@ bool IOManager::removeEvent(int fd, Event event) {
   }
 
   FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
-  
+
   // 检查是否正在监听该事件
   if ((fd_ctx->events & event) == 0) {
     ELOG_DEBUG(g_logger) << "This fd " << fd << " doesn't have this event "
@@ -281,7 +281,7 @@ bool IOManager::removeEvent(int fd, Event event) {
   // 更新事件计数和监听事件类型
   --m_pendingEventCount;
   fd_ctx->events = static_cast<Event>(fd_ctx->events & (~event));
-  
+
   // 重置事件上下文
   FdContext::EventContext& event_ctx = fd_ctx->getContext(event);
   fd_ctx->resetContext(event_ctx);
@@ -305,13 +305,13 @@ bool IOManager::cancelEvent(int fd, Event event) {
     RWMutexType::RLockGuard lock(m_mutex);
     fd_ctx = m_fdContexts[fd];
   }
-  
+
   ELOG_DEBUG(g_logger) << "epfd: " << m_epfd << ", fd: " << fd
                        << ", event: " << event
                        << ", fd event: " << fd_ctx->events;
-  
+
   FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
-  
+
   // 检查是否正在监听该事件
   if ((fd_ctx->events & event) == 0) {
     ELOG_DEBUG(g_logger) << "This fd " << fd << " doesn't have this event "
@@ -367,7 +367,7 @@ bool IOManager::cancelAll(int fd) {
   }
 
   FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
-  
+
   // 检查是否有事件在监听
   if (fd_ctx->events == 0) {
     ELOG_DEBUG(g_logger) << "This fd " << fd << " doesn't have event ";
@@ -442,7 +442,7 @@ void IOManager::SafeContextResize(size_t sz) {
   tmp.resize(sz);
   copy(m_fdContexts.begin(), m_fdContexts.end(), tmp.begin());
   m_fdContexts.swap(tmp);
-  
+
   // 为新的数组位置创建文件描述符上下文
   for (size_t i = 0; i < m_fdContexts.size(); ++i) {
     if (nullptr == m_fdContexts[i]) {
@@ -476,9 +476,9 @@ bool IOManager::stopping(uint64_t& time_out) {
  * 通过管道向epoll写入数据来唤醒等待的线程
  */
 void IOManager::tickle() {
-  if (!hasIdleThreads()) // 如果没有空闲的线程，直接返回，没必要唤醒
+  if (!hasIdleThreads())  // 如果没有空闲的线程，直接返回，没必要唤醒
     return;
-  
+
   // 约定：m_tickleFds[0]是读端，m_tickleFds[1]是发送端
   // 在这里写入数据，其他线程在epoll_wait就可以读取到事件，从而达到唤醒的目的
   int cnt = write(m_tickleFds[1], "t", 1);
@@ -497,14 +497,14 @@ void IOManager::tickle() {
  */
 void IOManager::idle() {
   ELOG_DEBUG(g_logger) << "idle";
-  constexpr uint32_t MAX_EVENTS = 256; // 一次epoll_wait最多处理的事件数
-  
+  constexpr uint32_t MAX_EVENTS = 256;  // 一次epoll_wait最多处理的事件数
+
   // 使用智能指针管理epoll_event数组，避免内存泄漏
   std::unique_ptr<epoll_event[]> ep_events(new epoll_event[MAX_EVENTS]);
 
   while (true) {
     uint64_t next_timeout{0};
-    
+
     // 获取下一个定时器的超时时间，同时返回IOManager是否正在停止
     if (stopping(next_timeout)) {
       ELOG_DEBUG(g_logger) << "IOManager stopping";
@@ -514,7 +514,7 @@ void IOManager::idle() {
     int res{0};
     do {
       constexpr int MAX_TIMEOUT = 3000;
-      
+
       // 看看现在最靠前的定时器是否小于这个超时时间，取较小的一个
       if (next_timeout != ~0ull)
         next_timeout = std::min(MAX_TIMEOUT, (int)next_timeout);
@@ -533,7 +533,7 @@ void IOManager::idle() {
 
     // 处理超时的定时器
     std::vector<std::function<void()>> timer_cbs{};
-    listExpiredCb(timer_cbs);   // 获取所有已经超时的定时器的回调函数
+    listExpiredCb(timer_cbs);  // 获取所有已经超时的定时器的回调函数
     if (!timer_cbs.empty()) {
       schedule(timer_cbs.begin(),
                timer_cbs.end());  // 将符合条件的timer的回调放进去
@@ -541,13 +541,13 @@ void IOManager::idle() {
     }
 
     ELOG_DEBUG(g_logger) << "idle: epoll wait, res: " << res;
-    
+
     // 处理epoll事件
     for (int i = 0; i < res; ++i) {
       epoll_event& event = ep_events[i];
-      
+
       // 处理管道唤醒事件
-      if (event.data.fd == m_tickleFds[0]) {  
+      if (event.data.fd == m_tickleFds[0]) {
         uint8_t dummy{};
         // 如果是被tickle唤醒的，将所有的数据全都读取出来
         while (read(event.data.fd, &dummy, 1) > 0)
@@ -557,17 +557,17 @@ void IOManager::idle() {
 
       // 处理文件描述符的IO事件
       FdContext* fd_ctx = static_cast<FdContext*>(event.data.ptr);
-      
+
       // 对fd_ctx加锁，防止其他线程在epoll_wait期间修改fd_ctx的状态
       FdContext::MutextType::LockGuard lock(fd_ctx->mutex);
-      
+
       ELOG_DEBUG(g_logger) << "epoll wait, event:" << event.events;
-      
+
       // 处理错误和挂起事件
       if (event.events & (EPOLLERR | EPOLLHUP)) {
         event.events |= EPOLLIN | EPOLLOUT;
       }
-      
+
       // 确定实际触发的事件类型
       int real_events{NONE};
       if (event.events & EPOLLIN) {
@@ -587,10 +587,10 @@ void IOManager::idle() {
                            << ", event: " << event.events
                            << ", left_events: " << left_events << ", op: " << op
                            << ", real_events: " << real_events;
-      
+
       // 重新配置epoll事件，使用边缘触发模式
       event.events = left_events | EPOLLET;
-      
+
       // 将没有处理完的事件继续放进去或者是处理完了就删除掉不再监听
       int res2 = epoll_ctl(m_epfd, op, fd_ctx->fd, &event);
       if (res2 != 0) {
@@ -606,22 +606,22 @@ void IOManager::idle() {
         fd_ctx->triggerEvent(READ);
         --m_pendingEventCount;
       }
-      
+
       // 触发写事件，会将回调函数放入调度器的任务队列中
       if (real_events & WRITE) {
         fd_ctx->triggerEvent(WRITE);
         --m_pendingEventCount;
       }
     }
-    
+
     // 协程切换和调度
     auto cur_fiber = Fiber::GetThis();
     auto raw_ptr = cur_fiber.get();
     cur_fiber.reset();
-    
+
     ELOG_DEBUG(g_logger) << "ready to yield, cur fiber id: " << raw_ptr->getId()
                          << ", cur fiber state: " << raw_ptr->getState();
-    
+
     // 将当前协程切换到后台执行，进入调度器协程，开始执行任务
     raw_ptr->yield();
   }

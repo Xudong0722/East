@@ -6,8 +6,8 @@
  */
 #include <iostream>
 
-#include "../include/util.h"
 #include "../include/Elog.h"
+#include "../include/util.h"
 #include "HttpConnection.h"
 #include "HttpParser.h"
 namespace East {
@@ -17,7 +17,8 @@ static Logger::sptr g_logger = ELOG_NAME("system");
 
 std::string HttpResult::toString() const {
   std::stringstream ss;
-  ss << "[HttpResult result=" << result
+  ss << "[HttpResult result="
+     << result
      //<< ", resp = " << (resp ? resp->toString() : "nullptr")
      << ", error = " << error << "]";
   return ss.str();
@@ -39,7 +40,7 @@ HttpResp::sptr HttpConnection::recvResponse() {
       close();
       return nullptr;
     }
-    len += offset;  //所有已读数据的长度
+    len += offset;     //所有已读数据的长度
     data[len] = '\0';  //保证字符串结尾
     int parse_len = parser->execute(data, len, false);  //当前已经可以解析的长度
     if (parser->hasError()) {
@@ -273,66 +274,66 @@ HttpResult::sptr HttpConnection::DoPost(Uri::sptr uri,
 HttpConnectionPool::HttpConnectionPool(const std::string& host,
                                        const std::string& vhost, uint32_t port,
                                        uint32_t maxSize, uint32_t maxAliveTime,
-                                       uint32_t maxRequest) 
-  : m_host(host)
-  , m_vhost(vhost)
-  , m_port(port)
-  , m_maxSize(maxSize)
-  , m_maxAliveTime(maxAliveTime)
-  , m_maxRequest(maxRequest){}
+                                       uint32_t maxRequest)
+    : m_host(host),
+      m_vhost(vhost),
+      m_port(port),
+      m_maxSize(maxSize),
+      m_maxAliveTime(maxAliveTime),
+      m_maxRequest(maxRequest) {}
 
 HttpConnection::sptr HttpConnectionPool::getConnection() {
   uint64_t now = GetCurrentTimeInMs();
   MutexType::LockGuard lock(m_mutex);
   std::vector<HttpConnection*> to_delete;
   HttpConnection* res{nullptr};
-  while(!m_conns.empty()) {
+  while (!m_conns.empty()) {
     auto conn = m_conns.front();
     m_conns.pop_front();
-    if(!conn->isConnected()) {
+    if (!conn->isConnected()) {
       //连接已经断开了
       to_delete.push_back(conn);
       m_conns.pop_front();
       --m_total;
       continue;
     }
-    if(conn->getCreateTime() + m_maxAliveTime < now) {
+    if (conn->getCreateTime() + m_maxAliveTime < now) {
       //连接过期
       to_delete.push_back(conn);
       --m_total;
       m_conns.pop_front();
       continue;
     }
-    
+
     res = conn;
     break;
   }
-  
+
   lock.unlock();
-  for(auto& conn : to_delete) {
+  for (auto& conn : to_delete) {
     //释放连接
-    if(conn) {
+    if (conn) {
       conn->close();
       delete conn;
     }
   }
 
-  if(nullptr == res) {
-    if(m_total >= m_maxSize) {
+  if (nullptr == res) {
+    if (m_total >= m_maxSize) {
       //连接池已满
       return nullptr;
     }
 
     //创建新的连接
     IPAddress::sptr addr = Address::LookupAnyIPAddress(m_host);
-    if(nullptr == addr) {
-      ELOG_ERROR(g_logger) << "Lookup host failed: " <<m_host;
+    if (nullptr == addr) {
+      ELOG_ERROR(g_logger) << "Lookup host failed: " << m_host;
       return nullptr;
     }
 
     addr->setPort(m_port);
     Socket::sptr sock = Socket::CreateTCP(addr);
-    if(!sock->connect(addr)) {
+    if (!sock->connect(addr)) {
       ELOG_ERROR(g_logger) << "Connect to host failed: " << addr->toString();
       return nullptr;
     }
@@ -341,7 +342,8 @@ HttpConnection::sptr HttpConnectionPool::getConnection() {
     ++m_total;
     res->setCreateTime(GetCurrentTimeInMs());
   }
-  return HttpConnection::sptr(res, std::bind(&HttpConnectionPool::ReleasePtr, std::placeholders::_1, this));
+  return HttpConnection::sptr(res, std::bind(&HttpConnectionPool::ReleasePtr,
+                                             std::placeholders::_1, this));
 }
 
 HttpResult::sptr HttpConnectionPool::doRequest(HttpMethod method, Uri::sptr uri,
@@ -349,8 +351,7 @@ HttpResult::sptr HttpConnectionPool::doRequest(HttpMethod method, Uri::sptr uri,
                                                const std::string& body,
                                                uint64_t timeout_ms) {
   std::stringstream ss;
-  ss << uri->getPath()
-     << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
+  ss << uri->getPath() << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
      << (uri->getFragment().empty() ? "" : "#" + uri->getFragment());
   return doRequest(method, ss.str(), headers, body, timeout_ms);
 }
@@ -380,7 +381,7 @@ HttpResult::sptr HttpConnectionPool::doRequest(HttpMethod method,
     req->setHeader(item.first, item.second);
   }
   if (!has_host) {
-    if(m_vhost.empty()) {
+    if (m_vhost.empty()) {
       req->setHeader("Host", m_host);
     } else {
       req->setHeader("Host", m_vhost);
@@ -395,13 +396,14 @@ HttpResult::sptr HttpConnectionPool::doRequest(HttpReq::sptr req,
   if (nullptr == conn) {
     return std::make_shared<HttpResult>(
         Enum2Utype(HttpResult::ErrorCode::POOL_GET_CONNECTION_FAIL), nullptr,
-        "Get connection from pool failed: " + m_host + ":" + std::to_string(m_port));
+        "Get connection from pool failed: " + m_host + ":" +
+            std::to_string(m_port));
   }
   auto sock = conn->getSocket();
   if (nullptr == sock) {
     return std::make_shared<HttpResult>(
         Enum2Utype(HttpResult::ErrorCode::POOL_INVALID_CONNECTION), nullptr,
-        "Invalid connection in pool: " + m_host + ":" + std::to_string(m_port)); 
+        "Invalid connection in pool: " + m_host + ":" + std::to_string(m_port));
   }
   sock->setRecvTimeout(timeout_ms);
   auto addr = sock->getRemoteAddr();
@@ -441,8 +443,7 @@ HttpResult::sptr HttpConnectionPool::doGet(Uri::sptr uri,
                                            const std::string& body,
                                            uint64_t timeout_ms) {
   std::stringstream ss;
-  ss << uri->getPath()
-     << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
+  ss << uri->getPath() << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
      << (uri->getFragment().empty() ? "" : "#" + uri->getFragment());
   return doRequest(HttpMethod::GET, ss.str(), headers, body, timeout_ms);
 }
@@ -459,36 +460,37 @@ HttpResult::sptr HttpConnectionPool::doPost(Uri::sptr uri,
                                             const std::string& body,
                                             uint64_t timeout_ms) {
   std::stringstream ss;
-  ss << uri->getPath()
-     << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
+  ss << uri->getPath() << (uri->getQuery().empty() ? "" : "?" + uri->getQuery())
      << (uri->getFragment().empty() ? "" : "#" + uri->getFragment());
   return doRequest(HttpMethod::POST, ss.str(), headers, body, timeout_ms);
 }
 
 void HttpConnectionPool::ReleasePtr(HttpConnection* ptr,
                                     HttpConnectionPool* pool) {
-  if(nullptr == ptr || nullptr == pool) return ;
+  if (nullptr == ptr || nullptr == pool)
+    return;
   ptr->setRequestCount(ptr->getRequestCount() + 1);
   //将仍旧可以利用的连接放回连接池
   auto b1 = ptr->isConnected();
-  auto b2 = (ptr->getCreateTime() + pool->m_maxAliveTime) < GetCurrentTimeInMs();
+  auto b2 =
+      (ptr->getCreateTime() + pool->m_maxAliveTime) < GetCurrentTimeInMs();
   auto b3 = ptr->getRequestCount() >= pool->m_maxRequest;
-  ELOG_INFO(g_logger) << "ReleasePtr: isConnected=" << b1
-                       << ", getCreateTime() + m_maxAliveTime > GetCurrentTimeInMs()="
-                       << b2
-                       << "current time=" << GetCurrentTimeInMs()
-                        << ", ptr->getCreateTime()=" << ptr->getCreateTime()
-                        << "maxAliveTime=" << pool->m_maxAliveTime
-                       << ", getRequestCount() >= m_maxRequest=" << b3;
+  ELOG_INFO(g_logger)
+      << "ReleasePtr: isConnected=" << b1
+      << ", getCreateTime() + m_maxAliveTime > GetCurrentTimeInMs()=" << b2
+      << "current time=" << GetCurrentTimeInMs()
+      << ", ptr->getCreateTime()=" << ptr->getCreateTime()
+      << "maxAliveTime=" << pool->m_maxAliveTime
+      << ", getRequestCount() >= m_maxRequest=" << b3;
 
-  if(!ptr->isConnected() 
-     || ((ptr->getCreateTime() + pool->m_maxAliveTime) < GetCurrentTimeInMs())
-     || ptr->getRequestCount() >= pool->m_maxRequest) {
+  if (!ptr->isConnected() ||
+      ((ptr->getCreateTime() + pool->m_maxAliveTime) < GetCurrentTimeInMs()) ||
+      ptr->getRequestCount() >= pool->m_maxRequest) {
     //连接已经断开了或者连接过期了，请求次数超过限制了
-      ptr->close();
-      delete ptr;
-      --pool->m_total;
-      return ;
+    ptr->close();
+    delete ptr;
+    --pool->m_total;
+    return;
   }
   MutexType::LockGuard lock(pool->m_mutex);
   pool->m_conns.push_back(ptr);

@@ -26,7 +26,7 @@ class TcpServer : public std::enable_shared_from_this<TcpServer>,
                   protected noncopymoveable {
  public:
   using sptr = std::shared_ptr<TcpServer>;
-  
+
   /**
    * @brief 构造函数
    * @param worker 工作协程管理器，用于处理客户端连接
@@ -34,7 +34,7 @@ class TcpServer : public std::enable_shared_from_this<TcpServer>,
    */
   TcpServer(East::IOManager* worker = East::IOManager::GetThis(),
             East::IOManager* accept_worker = East::IOManager::GetThis());
-  
+
   /**
    * @brief 析构函数，关闭所有socket连接
    */
@@ -46,7 +46,7 @@ class TcpServer : public std::enable_shared_from_this<TcpServer>,
    * @return 绑定成功返回true，失败返回false
    */
   virtual bool bind(East::Address::sptr addr);
-  
+
   /**
    * @brief 绑定多个地址到服务器
    * @param addrs 要绑定的地址列表
@@ -55,13 +55,13 @@ class TcpServer : public std::enable_shared_from_this<TcpServer>,
    */
   virtual bool bind(const std::vector<Address::sptr>& addrs,
                     std::vector<Address::sptr>& fails);
-  
+
   /**
    * @brief 启动服务器，开始接受客户端连接
    * @return 启动成功返回true
    */
   virtual bool start();
-  
+
   /**
    * @brief 停止服务器，关闭所有连接
    */
@@ -72,19 +72,19 @@ class TcpServer : public std::enable_shared_from_this<TcpServer>,
    * @return 读取超时时间（毫秒）
    */
   uint64_t getReadTimeout() const { return m_readTimeout; }
-  
+
   /**
    * @brief 获取服务器名称
    * @return 服务器名称字符串
    */
   std::string getName() const { return m_name; }
-  
+
   /**
    * @brief 设置读取超时时间
    * @param v 超时时间（毫秒）
    */
   void setReadTimeout(uint64_t v) { m_readTimeout = v; }
-  
+
   /**
    * @brief 设置服务器名称
    * @param name 服务器名称
@@ -103,7 +103,7 @@ class TcpServer : public std::enable_shared_from_this<TcpServer>,
    * @param sock 客户端socket连接
    */
   virtual void handleClient(Socket::sptr sock);
-  
+
   /**
    * @brief 开始接受连接的虚函数，子类可重写此函数
    * @param sock 监听socket
@@ -111,12 +111,12 @@ class TcpServer : public std::enable_shared_from_this<TcpServer>,
   virtual void startAccept(Socket::sptr sock);
 
  private:
-  IOManager* m_worker{nullptr};        ///< 工作协程管理器，处理客户端连接
+  IOManager* m_worker{nullptr};  ///< 工作协程管理器，处理客户端连接
   IOManager* m_acceptWorker{nullptr};  ///< 接受连接协程管理器，监听新连接
-  std::vector<Socket::sptr> m_socks;   ///< 监听socket列表
-  uint64_t m_readTimeout{0};           ///< 读取超时时间，防止资源浪费
+  std::vector<Socket::sptr> m_socks;  ///< 监听socket列表
+  uint64_t m_readTimeout{0};  ///< 读取超时时间，防止资源浪费
 
-  std::string m_name;                  ///< 服务器名称
-  bool m_isStop{false};                ///< 服务器停止标志
+  std::string m_name;    ///< 服务器名称
+  bool m_isStop{false};  ///< 服务器停止标志
 };
 }  // namespace East

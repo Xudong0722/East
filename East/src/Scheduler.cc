@@ -22,8 +22,7 @@ static East::Logger::sptr g_logger = ELOG_NAME("system");
  * 同一个调度器下的所有线程都指向同一个调度器实例，
  * 用于在协程切换时获取当前线程的调度器上下文。
  */
-static thread_local Scheduler* t_scheduler =
-    nullptr;
+static thread_local Scheduler* t_scheduler = nullptr;
 
 /**
  * @brief 线程本地存储：当前线程的调度协程指针
@@ -31,8 +30,7 @@ static thread_local Scheduler* t_scheduler =
  * 每个线程都有自己独立的调度协程，包括调用者线程。
  * 用于管理协程的调度和切换。
  */
-static thread_local Fiber* t_scheduler_fiber =
-    nullptr;  
+static thread_local Fiber* t_scheduler_fiber = nullptr;
 
 /**
  * @brief 全局任务ID计数器

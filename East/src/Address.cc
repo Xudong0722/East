@@ -178,10 +178,10 @@ bool Address::GetInterfaceAddresses(
       // 过滤指定地址族的接口
       if (family != AF_UNSPEC && family != next->ifa_addr->sa_family)
         continue;
-      
+
       Address::sptr addr{nullptr};
       uint32_t prefix_len = ~0u;
-      
+
       switch (next->ifa_addr->sa_family) {
         case AF_INET: {
           addr = Create(next->ifa_addr, sizeof(sockaddr_in));
@@ -276,7 +276,7 @@ bool Address::operator!=(const Address& rhs) const {
 IPAddress::sptr IPAddress::Create(const char* address, uint16_t port) {
   if (nullptr == address)
     return nullptr;
-  
+
   addrinfo hints, *results;
   memset(&hints, 0, sizeof(hints));
   hints.ai_flags = 0;
@@ -322,7 +322,7 @@ IPV4Address::IPV4Address(uint32_t address, uint16_t port) {
 IPV4Address::sptr IPV4Address::Create(const char* address, uint16_t port) {
   if (nullptr == address)
     return nullptr;
-  
+
   IPV4Address::sptr addr = std::make_shared<IPV4Address>();
   int res = inet_pton(AF_INET, address, &addr->m_addr.sin_addr);
   if (res != 1) {
@@ -358,8 +358,8 @@ IPAddress::sptr IPV4Address::getBroadcastAddr(uint32_t prefix_len) const {
   }
   sockaddr_in broadcast_addr(m_addr);
   // 广播地址 = 网络地址 | 掩码
-  broadcast_addr.sin_addr.s_addr |= byteswapOnLittleEndian(
-      CreateMask<uint32_t>(prefix_len));
+  broadcast_addr.sin_addr.s_addr |=
+      byteswapOnLittleEndian(CreateMask<uint32_t>(prefix_len));
   return std::make_shared<IPV4Address>(broadcast_addr);
 }
 
@@ -412,7 +412,7 @@ IPV6Address::IPV6Address(const char* address, uint16_t port) {
 IPV6Address::sptr IPV6Address::Create(const char* address, uint32_t port) {
   if (nullptr == address)
     return nullptr;
-  
+
   IPV6Address::sptr addr = std::make_shared<IPV6Address>();
   int res = inet_pton(AF_INET, address, &addr->m_addr.sin6_addr);
   if (res != 1) {
@@ -435,10 +435,9 @@ socklen_t IPV6Address::getAddrLen() const {
 std::ostream& IPV6Address::dump(std::ostream& os) const {
   os << "[";
   // 将uint8_t[16]转换为8个uint16_t进行处理
-  uint16_t* addr =
-      (uint16_t*)&m_addr.sin6_addr.s6_addr;
+  uint16_t* addr = (uint16_t*)&m_addr.sin6_addr.s6_addr;
   bool used_zeros{false};
-  
+
   // 处理IPv6地址的压缩表示（省略连续的0）
   for (int i = 0; i < 8; ++i) {
     if (addr[i] == 0 && !used_zeros) {

@@ -31,7 +31,7 @@ class Semaphore : private noncopymoveable {
    * @param count 初始信号量计数，默认为0
    */
   Semaphore(uint32_t count = 0);
-  
+
   /**
    * @brief 析构函数，自动清理信号量资源
    */
@@ -44,7 +44,7 @@ class Semaphore : private noncopymoveable {
    * 如果计数为0，则阻塞当前线程直到被其他线程通知
    */
   void wait();
-  
+
   /**
    * @brief 通知信号量
    * 
@@ -80,7 +80,7 @@ class ScopedLock : private noncopymoveable {
    * @brief 析构函数，自动释放锁
    */
   ~ScopedLock() { unlock(); }
-  
+
   /**
    * @brief 手动获取锁
    * 
@@ -106,8 +106,8 @@ class ScopedLock : private noncopymoveable {
   }
 
  private:
-  T& m_lock;           ///< 锁对象引用
-  bool m_locked;       ///< 当前锁定状态
+  T& m_lock;      ///< 锁对象引用
+  bool m_locked;  ///< 当前锁定状态
 };
 
 /**
@@ -131,7 +131,7 @@ class ReadScopedLock : private noncopymoveable {
    * @brief 析构函数，自动释放读锁
    */
   ~ReadScopedLock() { unlock(); }
-  
+
   /**
    * @brief 手动获取读锁
    * 
@@ -157,8 +157,8 @@ class ReadScopedLock : private noncopymoveable {
   }
 
  private:
-  T& m_lock;                    ///< 读写锁对象引用
-  bool m_locked{false};         ///< 当前锁定状态
+  T& m_lock;             ///< 读写锁对象引用
+  bool m_locked{false};  ///< 当前锁定状态
 };
 
 /**
@@ -182,7 +182,7 @@ class WriteScopedLock : private noncopymoveable {
    * @brief 析构函数，自动释放写锁
    */
   ~WriteScopedLock() { unlock(); }
-  
+
   /**
    * @brief 手动获取写锁
    * 
@@ -208,8 +208,8 @@ class WriteScopedLock : private noncopymoveable {
   }
 
  private:
-  T& m_lock;                    ///< 读写锁对象引用
-  bool m_locked{false};         ///< 当前锁定状态
+  T& m_lock;             ///< 读写锁对象引用
+  bool m_locked{false};  ///< 当前锁定状态
 };
 
 /**
@@ -227,7 +227,7 @@ class RWLock : private noncopymoveable {
  public:
   using RLockGuard = ReadScopedLock<RWLock>;   ///< 读锁RAII包装器类型
   using WLockGuard = WriteScopedLock<RWLock>;  ///< 写锁RAII包装器类型
-  
+
   /**
    * @brief 构造函数，初始化读写锁
    */
@@ -277,7 +277,7 @@ class RWLock : private noncopymoveable {
 class Mutex : private noncopymoveable {
  public:
   using LockGuard = ScopedLock<Mutex>;  ///< 锁RAII包装器类型
-  
+
   /**
    * @brief 构造函数，初始化互斥锁
    */
@@ -321,12 +321,12 @@ class Mutex : private noncopymoveable {
 class SpinLock : private noncopymoveable {
  public:
   using LockGuard = ScopedLock<SpinLock>;  ///< 锁RAII包装器类型
-  
+
   /**
    * @brief 构造函数，初始化自旋锁
    */
   SpinLock() { pthread_spin_init(&m_spin_lock, 0); }
-  
+
   /**
    * @brief 析构函数，销毁自旋锁
    */
@@ -365,7 +365,7 @@ class SpinLock : private noncopymoveable {
 class CASLock : noncopymoveable {
  public:
   using LockGuard = ScopedLock<CASLock>;  ///< 锁RAII包装器类型
-  
+
   /**
    * @brief 构造函数，初始化原子标志
    */

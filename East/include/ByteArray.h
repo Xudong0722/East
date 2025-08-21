@@ -44,20 +44,20 @@ class ByteArray {
      * @param s 内存块大小（字节）
      */
     Node(size_t s);
-    
+
     /**
      * @brief 默认构造函数
      */
     Node();
-    
+
     /**
      * @brief 析构函数，释放分配的内存
      */
     ~Node();
 
-    char* ptr{nullptr};    ///< 内存块指针
-    Node* next{nullptr};   ///< 下一个内存块指针
-    size_t size{0};        ///< 内存块大小
+    char* ptr{nullptr};   ///< 内存块指针
+    Node* next{nullptr};  ///< 下一个内存块指针
+    size_t size{0};       ///< 内存块大小
   };
 
   /**
@@ -65,7 +65,7 @@ class ByteArray {
    * @param base_size 基础内存块大小，默认为4096字节
    */
   ByteArray(size_t base_size = 4096);
-  
+
   /**
    * @brief 析构函数，释放所有内存块
    */
@@ -80,21 +80,21 @@ class ByteArray {
    * ZigZag编码将负数映射到正数，便于变长编码
    */
   static uint32_t EncodeZigZagI32(int32_t n);
-  
+
   /**
    * @brief 将64位有符号整数编码为ZigZag格式
    * @param n 要编码的64位整数
    * @return ZigZag编码后的64位无符号整数
    */
   static uint64_t EncodeZigZagI64(int64_t n);
-  
+
   /**
    * @brief 将ZigZag编码的32位无符号整数解码为有符号整数
    * @param n ZigZag编码的32位无符号整数
    * @return 解码后的32位有符号整数
    */
   static int32_t DecodeZigZagI32(uint32_t n);
-  
+
   /**
    * @brief 将ZigZag编码的64位无符号整数解码为有符号整数
    * @param n ZigZag编码的64位无符号整数
@@ -108,43 +108,43 @@ class ByteArray {
    * @param val 要写入的值
    */
   void writeFixInt8(int8_t val);
-  
+
   /**
    * @brief 写入8位无符号整数
    * @param val 要写入的值
    */
   void writeFixUInt8(uint8_t val);
-  
+
   /**
    * @brief 写入16位有符号整数
    * @param val 要写入的值
    */
   void writeFixInt16(int16_t val);
-  
+
   /**
    * @brief 写入16位无符号整数
    * @param val 要写入的值
    */
   void writeFixUInt16(uint16_t val);
-  
+
   /**
    * @brief 写入32位有符号整数
    * @param val 要写入的值
    */
   void writeFixInt32(int32_t val);
-  
+
   /**
    * @brief 写入32位无符号整数
    * @param val 要写入的值
    */
   void writeFixUInt32(uint32_t val);
-  
+
   /**
    * @brief 写入64位有符号整数
    * @param val 要写入的值
    */
   void writeFixInt64(int64_t val);
-  
+
   /**
    * @brief 写入64位无符号整数
    * @param val 要写入的值
@@ -157,19 +157,19 @@ class ByteArray {
    * @param val 要写入的值
    */
   void writeInt32(int32_t val);
-  
+
   /**
    * @brief 写入32位无符号整数（使用变长编码）
    * @param val 要写入的值
    */
   void writeUInt32(uint32_t val);
-  
+
   /**
    * @brief 写入64位有符号整数（使用ZigZag编码和变长编码）
    * @param val 要写入的值
    */
   void writeInt64(int64_t val);
-  
+
   /**
    * @brief 写入64位无符号整数（使用变长编码）
    * @param val 要写入的值
@@ -181,7 +181,7 @@ class ByteArray {
    * @param val 要写入的值
    */
   void writeFloat(float val);
-  
+
   /**
    * @brief 写入64位浮点数
    * @param val 要写入的值
@@ -194,25 +194,25 @@ class ByteArray {
    * @param val 要写入的字符串
    */
   void writeStringFix16(const std::string& val);
-  
+
   /**
    * @brief 写入字符串，长度使用32位整数表示
    * @param val 要写入的字符串
    */
   void writeStringFix32(const std::string& val);
-  
+
   /**
    * @brief 写入字符串，长度使用64位整数表示
    * @param val 要写入的字符串
    */
   void writeStringFix64(const std::string& val);
-  
+
   /**
    * @brief 写入字符串，长度使用变长整数表示
    * @param val 要写入的字符串
    */
   void writeStringVarint(const std::string& val);
-  
+
   /**
    * @brief 写入字符串，不包含长度信息
    * @param val 要写入的字符串
@@ -225,79 +225,79 @@ class ByteArray {
    * @return 读取的8位有符号整数
    */
   int8_t readFixInt8();
-  
+
   /**
    * @brief 读取8位无符号整数
    * @return 读取的8位无符号整数
    */
   uint8_t readFixUInt8();
-  
+
   /**
    * @brief 读取16位有符号整数
    * @return 读取的16位有符号整数
    */
   int16_t readFixInt16();
-  
+
   /**
    * @brief 读取16位无符号整数
    * @return 读取的16位无符号整数
    */
   uint16_t readFixUInt16();
-  
+
   /**
    * @brief 读取32位有符号整数
    * @return 读取的32位有符号整数
    */
   int32_t readFixInt32();
-  
+
   /**
    * @brief 读取32位无符号整数
    * @return 读取的32位无符号整数
    */
   uint32_t readFixUInt32();
-  
+
   /**
    * @brief 读取64位有符号整数
    * @return 读取的64位有符号整数
    */
   int64_t readFixInt64();
-  
+
   /**
    * @brief 读取64位无符号整数
    * @return 读取的64位无符号整数
    */
   uint64_t readFixUInt64();
-  
+
   /**
    * @brief 读取32位有符号整数（变长编码）
    * @return 读取的32位有符号整数
    */
   int32_t readInt32();
-  
+
   /**
    * @brief 读取32位无符号整数（变长编码）
    * @return 读取的32位无符号整数
    */
   uint32_t readUInt32();
-  
+
   /**
    * @brief 读取64位有符号整数（变长编码）
    * @return 读取的64位有符号整数
    */
   int64_t readInt64();
-  
+
   /**
    * @brief 读取64位无符号整数（变长编码）
    * @return 读取的64位无符号整数
    */
   uint64_t readUInt64();
-  
+
   /**
    * @brief 读取32位浮点数
    * @return 读取的32位浮点数
    */
   float readFloat();
-  
+
   /**
    * @brief 读取64位浮点数
    * @return 读取的64位浮点数
@@ -309,19 +309,19 @@ class ByteArray {
    * @return 读取的字符串
    */
   std::string readStringFix16();
-  
+
   /**
    * @brief 读取字符串，长度使用32位整数表示
    * @return 读取的字符串
    */
   std::string readStringFix32();
-  
+
   /**
    * @brief 读取字符串，长度使用64位整数表示
    * @return 读取的字符串
    */
   std::string readStringFix64();
-  
+
   /**
    * @brief 读取字符串，长度使用变长整数表示
    * @return 读取的字符串
@@ -339,14 +339,14 @@ class ByteArray {
    * @param size 数据大小
    */
   void write(const void* buf, size_t size);
-  
+
   /**
    * @brief 从当前偏移位置读取数据
    * @param buf 输出缓冲区
    * @param size 要读取的数据大小
    */
   void read(void* buf, size_t size);
-  
+
   /**
    * @brief 从指定偏移位置读取数据（不改变当前偏移）
    * @param buf 输出缓冲区
@@ -360,7 +360,7 @@ class ByteArray {
    * @return 当前偏移位置
    */
   size_t getOffset() const;
-  
+
   /**
    * @brief 设置读写偏移位置
    * @param offset 新的偏移位置
@@ -374,7 +374,7 @@ class ByteArray {
    * @return 写入成功返回true，失败返回false
    */
   bool writeToFile(const std::string& file_name) const;
-  
+
   /**
    * @brief 从文件读取数据
    * @param file_name 文件名
@@ -399,7 +399,7 @@ class ByteArray {
    * @return 是小端字节序返回true，否则返回false
    */
   bool isLittleEndian() const;
-  
+
   /**
    * @brief 设置字节序
    * @param little_endian true表示小端，false表示大端
@@ -426,7 +426,7 @@ class ByteArray {
    */
   uint64_t getReadableBuffers(std::vector<iovec>& buffers,
                               uint64_t len = ~0ull) const;
-  
+
   /**
    * @brief 获取指定偏移位置数据的iovec数组
    * @param buffers 输出参数，存储iovec结构
@@ -469,9 +469,9 @@ class ByteArray {
   size_t m_offset{0};      ///< 当前读写偏移位置
   size_t m_size{0};        ///< 实际承载数据的大小
   size_t m_capacity{0};    ///< 总容量
-  int8_t m_endian{0};      ///< 字节序，默认大端（网络传输默认大端）
-  Node* m_root;            ///< 内存块链表的头指针
-  Node* m_cur;             ///< 当前内存块的指针
+  int8_t m_endian{0};  ///< 字节序，默认大端（网络传输默认大端）
+  Node* m_root;        ///< 内存块链表的头指针
+  Node* m_cur;         ///< 当前内存块的指针
 };
 
 }  // namespace East

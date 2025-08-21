@@ -6,19 +6,18 @@
  */
 #pragma once
 
-#include "singleton.h"
-#include "Thread.h"
 #include "Mutex.h"
+#include "Thread.h"
+#include "singleton.h"
 
 #include <map>
 #include <vector>
 
-namespace East
-{
+namespace East {
 class Env {
-public:
+ public:
   using RWMutexType = RWLock;
-  
+
   bool init(int argc, char** argv);
 
   void add(const std::string& key, const std::string& val);
@@ -26,12 +25,12 @@ public:
   void del(const std::string& key);
   std::string get(const std::string& key, const std::string& default_val = "");
   void printArgs();
-  
+
   void addHelp(const std::string& key, const std::string& desc);
   void removeHelp(const std::string& key);
   void printHelp();
-  
-private:
+
+ private:
   std::string m_program;
   RWMutexType m_mutex;
   std::map<std::string, std::string> m_args;
@@ -39,5 +38,4 @@ private:
 };
 
 using EnvMgr = East::Singleton<Env>;
-} // namespace East
-
+}  // namespace East

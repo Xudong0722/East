@@ -43,7 +43,7 @@ class HttpConnection : public SocketStream {
  public:
   using sptr = std::shared_ptr<HttpConnection>;
   ~HttpConnection();
-  
+
   static HttpResult::sptr DoRequest(HttpMethod method, Uri::sptr uri,
                                     const HttpReq::MapType& headers = {},
                                     const std::string& body = {},
@@ -79,17 +79,18 @@ class HttpConnection : public SocketStream {
 
   HttpConnection(Socket::sptr sock, bool owner = true);
 
-public:
+ public:
   HttpResp::sptr recvResponse();
   int sendRequest(HttpReq::sptr req);
-  
+
   void setCreateTime(uint64_t t) { m_createTime = t; }
   uint64_t getCreateTime() const { return m_createTime; }
-  
+
   void setRequestCount(uint32_t count) { m_requestCount = count; }
   uint32_t getRequestCount() const { return m_requestCount; }
-private:
-  uint64_t m_createTime{0};  //创建时间
+
+ private:
+  uint64_t m_createTime{0};    //创建时间
   uint32_t m_requestCount{0};  //请求次数
 };
 
@@ -115,22 +116,25 @@ class HttpConnectionPool {
                              const std::string& body = {},
                              uint64_t timeout_ms = 3000);
 
-  HttpResult::sptr doRequest(HttpReq::sptr req,
-                             uint64_t timeout_ms = 3000);
+  HttpResult::sptr doRequest(HttpReq::sptr req, uint64_t timeout_ms = 3000);
 
   HttpResult::sptr doGet(const std::string& url,
                          const HttpReq::MapType& headers = {},
-                         const std::string& body = {}, uint64_t timeout_ms = 3000);
+                         const std::string& body = {},
+                         uint64_t timeout_ms = 3000);
 
   HttpResult::sptr doGet(Uri::sptr uri, const HttpReq::MapType& headers = {},
-                         const std::string& body = {}, uint64_t timeout_ms = 3000);
+                         const std::string& body = {},
+                         uint64_t timeout_ms = 3000);
 
   HttpResult::sptr doPost(const std::string& url,
                           const HttpReq::MapType& headers = {},
-                          const std::string& body = {}, uint64_t timeout_ms = 3000);
+                          const std::string& body = {},
+                          uint64_t timeout_ms = 3000);
 
   HttpResult::sptr doPost(Uri::sptr uri, const HttpReq::MapType& headers = {},
-                          const std::string& body = {}, uint64_t timeout_ms = 3000);
+                          const std::string& body = {},
+                          uint64_t timeout_ms = 3000);
 
  private:
   static void ReleasePtr(HttpConnection* ptr, HttpConnectionPool* pool);

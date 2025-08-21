@@ -41,7 +41,7 @@ class Scheduler {
    */
   Scheduler(size_t threads = 1, bool use_caller = true,
             const std::string& name = "");
-  
+
   /**
    * @brief 虚析构函数，确保正确清理资源
    */
@@ -59,13 +59,13 @@ class Scheduler {
    * @return 当前线程关联的调度器指针，如果没有则返回nullptr
    */
   static Scheduler* GetThis();
-  
+
   /**
    * @brief 设置当前线程的协程调度器
    * @param p 要设置的调度器指针
    */
   static void SetThis(Scheduler*);
-  
+
   /**
    * @brief 获取当前协程调度器的主协程
    * @return 主协程指针，用于协程切换
@@ -79,7 +79,7 @@ class Scheduler {
    * 如果use_caller为true，调用者线程也会参与调度。
    */
   void start();
-  
+
   /**
    * @brief 停止调度器
    * 
@@ -139,13 +139,13 @@ class Scheduler {
    * 包含任务调度、协程状态管理和空闲处理逻辑。
    */
   void run();
-  
+
   /**
    * @brief 检查是否有空闲线程
    * @return 有空闲线程返回true，否则返回false
    */
   bool hasIdleThreads();
-  
+
   /**
    * @brief 唤醒其他线程的虚函数
    * 
@@ -153,7 +153,7 @@ class Scheduler {
    * 子类可以重写此方法实现特定的唤醒机制。
    */
   virtual void tickle();
-  
+
   /**
    * @brief 空闲处理协程的虚函数
    * 
@@ -161,7 +161,7 @@ class Scheduler {
    * 子类可以重写此方法实现特定的空闲处理逻辑。
    */
   virtual void idle();
-  
+
   /**
    * @brief 检查调度器是否应该停止的虚函数
    * @return 应该停止返回true，否则返回false
@@ -204,11 +204,11 @@ class Scheduler {
    * 包含任务类型识别、状态管理和调试信息。
    */
   struct ExecuteTask {
-    Fiber::sptr fiber;           ///< 协程任务指针
-    std::function<void()> cb;    ///< 函数任务回调
+    Fiber::sptr fiber;         ///< 协程任务指针
+    std::function<void()> cb;  ///< 函数任务回调
 
-    int thread_id;               ///< 指定执行线程ID，-1表示任意线程
-    int task_id;                 ///< 任务唯一标识符，用于调试
+    int thread_id;  ///< 指定执行线程ID，-1表示任意线程
+    int task_id;    ///< 任务唯一标识符，用于调试
 
     /**
      * @brief 协程任务构造函数
@@ -217,7 +217,7 @@ class Scheduler {
      */
     ExecuteTask(Fiber::sptr f, int id)
         : fiber(f), thread_id(id), task_id(++s_task_id) {}
-    
+
     /**
      * @brief 函数任务构造函数
      * @param f 函数回调
@@ -225,7 +225,7 @@ class Scheduler {
      */
     ExecuteTask(std::function<void()> f, int id)
         : cb(f), thread_id(id), task_id(++s_task_id) {}
-    
+
     /**
      * @brief 协程任务移动构造函数
      * @param f 协程指针的指针，构造后原指针会被置空
@@ -236,7 +236,7 @@ class Scheduler {
           task_id(++s_task_id) {  //外部直接交出所有权，转移到ExecuteTask中
       fiber.swap(*f);
     }
-    
+
     /**
      * @brief 函数任务移动构造函数
      * @param f 函数回调的指针，构造后原指针会被置空
@@ -246,7 +246,7 @@ class Scheduler {
         : thread_id(id), task_id(++s_task_id) {
       cb.swap(*f);
     }
-    
+
     /**
      * @brief 默认构造函数
      */
@@ -273,9 +273,9 @@ class Scheduler {
      * @brief 任务类型枚举
      */
     enum TaskType {
-      NONE = -1,      ///< 无效任务
-      FIBER = 0,      ///< 协程任务
-      FUNCTION = 1,   ///< 函数任务
+      NONE = -1,     ///< 无效任务
+      FIBER = 0,     ///< 协程任务
+      FUNCTION = 1,  ///< 函数任务
     };
 
     /**

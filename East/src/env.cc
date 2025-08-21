@@ -6,45 +6,44 @@
  */
 
 #include "env.h"
-#include "Elog.h"
-#include <cstring>
 #include <algorithm>
-#include <iostream>
+#include <cstring>
 #include <iomanip>
+#include <iostream>
+#include "Elog.h"
 
-namespace East
-{
+namespace East {
 
-static East::Logger::sptr g_logger  = ELOG_NAME("system");
+static East::Logger::sptr g_logger = ELOG_NAME("system");
 
 bool Env::init(int argc, char** argv) {
   m_program = argv[0];
   const char* key = nullptr;
-  for(int i = 1; i<argc; ++i) {
-    if(argv[i][0] == '-') {
-        if(strlen(argv[i]) > 1){
-            //exclude '-' case
-            if(key != nullptr) {
-                add(key, "");
-            }
-            key = argv[i] + 1;
-        }else {
-            ELOG_ERROR(g_logger) << "Invalid arg idx: " << i 
-              << ", val: " << argv[i];
-            return false;
+  for (int i = 1; i < argc; ++i) {
+    if (argv[i][0] == '-') {
+      if (strlen(argv[i]) > 1) {
+        //exclude '-' case
+        if (key != nullptr) {
+          add(key, "");
         }
-    }else{
-        if(key != nullptr) {
-            add(key, argv[i]);
-            key = nullptr;
-        }else{
-            ELOG_ERROR(g_logger) << "Invalid arg idx: " << i 
-              << ", val: " << argv[i];
-            return false;
-        }
+        key = argv[i] + 1;
+      } else {
+        ELOG_ERROR(g_logger)
+            << "Invalid arg idx: " << i << ", val: " << argv[i];
+        return false;
+      }
+    } else {
+      if (key != nullptr) {
+        add(key, argv[i]);
+        key = nullptr;
+      } else {
+        ELOG_ERROR(g_logger)
+            << "Invalid arg idx: " << i << ", val: " << argv[i];
+        return false;
+      }
     }
   }
-  if(key != nullptr) {
+  if (key != nullptr) {
     add(key, "");
   }
   return true;
@@ -57,7 +56,8 @@ void Env::add(const std::string& key, const std::string& val) {
 
 bool Env::has(const std::string& key) {
   RWMutexType::RLockGuard rlock(m_mutex);
-  if(m_args.find(key) != m_args.end()) return true;
+  if (m_args.find(key) != m_args.end())
+    return true;
   return false;
 }
 
@@ -67,43 +67,44 @@ void Env::del(const std::string& key) {
 }
 
 std::string Env::get(const std::string& key, const std::string& default_val) {
-    RWMutexType::RLockGuard rlock(m_mutex);
-    auto it = m_args.find(key);
-    if(it == m_args.end()) return default_val;
-    return it->second;
+  RWMutexType::RLockGuard rlock(m_mutex);
+  auto it = m_args.find(key);
+  if (it == m_args.end())
+    return default_val;
+  return it->second;
 }
-
 
 void Env::printArgs() {
   RWMutexType::RLockGuard rlock(m_mutex);
   std::cout << "Usage: " << m_program << " [options]" << std::endl;
-  for(const auto&[k,v] : m_args) {
+  for (const auto& [k, v] : m_args) {
     std::cout << std::setw(5) << k << "-" << v << '\n';
   }
 }
 
 void Env::addHelp(const std::string& key, const std::string& desc) {
   RWMutexType::WLockGuard wlock(m_mutex);
-  m_helps.erase(std::remove_if(m_helps.begin(), m_helps.end(), [&key](const auto& pair){
-    return pair.first == key;
-  }), m_helps.end());
+  m_helps.erase(
+      std::remove_if(m_helps.begin(), m_helps.end(),
+                     [&key](const auto& pair) { return pair.first == key; }),
+      m_helps.end());
   m_helps.emplace_back(std::make_pair(key, desc));
 }
 
 void Env::removeHelp(const std::string& key) {
-RWMutexType::WLockGuard wlock(m_mutex);
-  m_helps.erase(std::remove_if(m_helps.begin(), m_helps.end(), [&key](const auto& pair){
-    return pair.first == key;
-  }), m_helps.end());
+  RWMutexType::WLockGuard wlock(m_mutex);
+  m_helps.erase(
+      std::remove_if(m_helps.begin(), m_helps.end(),
+                     [&key](const auto& pair) { return pair.first == key; }),
+      m_helps.end());
 }
-
 
 void Env::printHelp() {
   RWMutexType::RLockGuard rlock(m_mutex);
   std::cout << "Usage: " << m_program << " [options]" << std::endl;
-  for(const auto&[k,v] : m_helps) {
+  for (const auto& [k, v] : m_helps) {
     std::cout << std::setw(5) << k << "-" << v << '\n';
   }
 }
 
-} // namespace East
+}  // namespace East

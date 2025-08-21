@@ -56,7 +56,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool run_in_scheduler)
   ++s_fiber_count;
   //没有指定的话，读配置
   m_stacksize = stack_size != 0 ? stack_size : g_fiber_stack_size->getValue();
-  
+
   m_stack = StackAllocator::Alloc(m_stacksize);
 
   if (getcontext(&m_ctx)) {
@@ -68,7 +68,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool run_in_scheduler)
   // } else {
   //   m_ctx.uc_link = &Scheduler::GetMainFiber()->m_ctx;  //diff
   // }
-  
+
   //这个协程时需要运行我们指定的函数，我们需要申请额外的空间
   m_ctx.uc_link = nullptr;
   m_ctx.uc_stack.ss_sp = m_stack;

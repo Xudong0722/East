@@ -38,7 +38,7 @@ class IPAddress;
 class Address {
  public:
   using sptr = std::shared_ptr<Address>;
-  
+
   Address() = default;
   virtual ~Address() = default;
 
@@ -62,7 +62,7 @@ class Address {
   static bool Lookup(std::vector<Address::sptr>& result,
                      const std::string& host, int family = AF_UNSPEC,
                      int type = SOCK_STREAM, int protocol = 0);
-  
+
   /**
    * @brief 查找指定主机名的任意一个地址
    * @param host 主机名或IP地址字符串
@@ -73,7 +73,7 @@ class Address {
    */
   static sptr LookupAny(const std::string& host, int family = AF_UNSPEC,
                         int type = SOCK_STREAM, int protocol = 0);
-  
+
   /**
    * @brief 查找指定主机名的任意一个IP地址
    * @param host 主机名或IP地址字符串
@@ -96,7 +96,7 @@ class Address {
   static bool GetInterfaceAddresses(
       std::multimap<std::string, std::pair<Address::sptr, uint32_t>>& result,
       int family = AF_UNSPEC);
-  
+
   /**
    * @brief 获取指定网络接口的地址信息
    * @param result 输出参数，存储地址和前缀长度的列表
@@ -119,7 +119,7 @@ class Address {
    * @return sockaddr结构指针，用于系统调用
    */
   virtual const sockaddr* getAddr() const = 0;
-  
+
   /**
    * @brief 获取地址结构长度
    * @return 地址结构的字节长度
@@ -132,7 +132,7 @@ class Address {
    * @return 输出流引用
    */
   virtual std::ostream& dump(std::ostream& os) const = 0;
-  
+
   /**
    * @brief 将地址转换为字符串
    * @return 地址的字符串表示
@@ -145,14 +145,14 @@ class Address {
    * @return 当前地址小于右操作数返回true
    */
   bool operator<(const Address& rhs) const;
-  
+
   /**
    * @brief 地址相等比较操作符
    * @param rhs 右操作数
    * @return 两个地址相等返回true
    */
   bool operator==(const Address& rhs) const;
-  
+
   /**
    * @brief 地址不等比较操作符
    * @param rhs 右操作数
@@ -178,21 +178,21 @@ class IPAddress : public Address {
    * @return IP地址智能指针，失败返回nullptr
    */
   static sptr Create(const char* address = nullptr, uint16_t port = 0);
-  
+
   /**
    * @brief 获取广播地址
    * @param prefix_len 子网前缀长度
    * @return 广播地址的智能指针
    */
   virtual IPAddress::sptr getBroadcastAddr(uint32_t prefix_len) const = 0;
-  
+
   /**
    * @brief 获取网络地址
    * @param prefix_len 子网前缀长度
    * @return 网络地址的智能指针
    */
   virtual IPAddress::sptr getNetworkAddr(uint32_t prefix_len) const = 0;
-  
+
   /**
    * @brief 获取子网掩码
    * @param prefix_len 子网前缀长度
@@ -205,7 +205,7 @@ class IPAddress : public Address {
    * @return 端口号
    */
   virtual uint16_t getPort() const = 0;
-  
+
   /**
    * @brief 设置端口号
    * @param port 新的端口号
@@ -228,7 +228,7 @@ class IPV4Address : public IPAddress {
    * @param addr sockaddr_in结构引用
    */
   IPV4Address(const sockaddr_in& addr);
-  
+
   /**
    * @brief 从IP地址和端口构造IPv4地址
    * @param address IPv4地址（网络字节序），默认为INADDR_ANY
@@ -243,7 +243,7 @@ class IPV4Address : public IPAddress {
    * @return IPv4地址智能指针，失败返回nullptr
    */
   static sptr Create(const char* address = nullptr, uint16_t port = 0);
-  
+
   // Address接口实现
   const sockaddr* getAddr() const override;
   socklen_t getAddrLen() const override;
@@ -274,13 +274,13 @@ class IPV6Address : public IPAddress {
    * @brief 默认构造函数，创建未初始化的IPv6地址
    */
   IPV6Address();
-  
+
   /**
    * @brief 从sockaddr_in6结构构造IPv6地址
    * @param address sockaddr_in6结构引用
    */
   IPV6Address(const sockaddr_in6& address);
-  
+
   /**
    * @brief 从IP地址字符串和端口构造IPv6地址
    * @param address IPv6地址字符串
@@ -295,7 +295,7 @@ class IPV6Address : public IPAddress {
    * @return IPv6地址智能指针，失败返回nullptr
    */
   static sptr Create(const char* address = nullptr, uint32_t port = 0);
-  
+
   // Address接口实现
   const sockaddr* getAddr() const override;
   socklen_t getAddrLen() const override;
@@ -326,7 +326,7 @@ class UnixAddress : public Address {
    * @brief 默认构造函数，创建抽象套接字地址
    */
   UnixAddress();
-  
+
   /**
    * @brief 从文件路径构造Unix域套接字地址
    * @param path 文件路径
@@ -336,18 +336,18 @@ class UnixAddress : public Address {
   // Address接口实现
   const sockaddr* getAddr() const override;
   socklen_t getAddrLen() const override;
-  
+
   /**
    * @brief 设置地址长度
    * @param len 新的地址长度
    */
   void setAddrLen(uint32_t len);
-  
+
   std::ostream& dump(std::ostream& os) const override;
 
  private:
-  sockaddr_un m_addr;    ///< Unix域套接字地址结构
-  socklen_t m_length;    ///< 地址长度
+  sockaddr_un m_addr;  ///< Unix域套接字地址结构
+  socklen_t m_length;  ///< 地址长度
 };
 
 /**
@@ -359,19 +359,19 @@ class UnixAddress : public Address {
 class UnknownAddress : public Address {
  public:
   using sptr = std::shared_ptr<UnknownAddress>;
-  
+
   /**
    * @brief 从地址族构造未知地址
    * @param family 地址族常量
    */
   UnknownAddress(int family);
-  
+
   /**
    * @brief 从sockaddr结构构造未知地址
    * @param addr sockaddr结构引用
    */
   UnknownAddress(const sockaddr& addr);
-  
+
   // Address接口实现
   const sockaddr* getAddr() const override;
   socklen_t getAddrLen() const override;

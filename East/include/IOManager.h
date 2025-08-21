@@ -34,9 +34,9 @@ class IOManager : public Scheduler, public TimerManager {
    * 定义了可监听的IO事件类型，对应epoll的事件类型
    */
   enum Event {
-    NONE = 0x0,    ///< 无事件
-    READ = 0x1,    ///< 读事件，对应EPOLL_EVENTS::EPOLLIN
-    WRITE = 0x4,   ///< 写事件，对应EPOLL_EVENTS::EPOLLOUT
+    NONE = 0x0,   ///< 无事件
+    READ = 0x1,   ///< 读事件，对应EPOLL_EVENTS::EPOLLIN
+    WRITE = 0x4,  ///< 写事件，对应EPOLL_EVENTS::EPOLLOUT
   };
 
  private:
@@ -47,7 +47,7 @@ class IOManager : public Scheduler, public TimerManager {
    */
   struct FdContext {
     using MutextType = Mutex;
-    
+
     /**
      * @brief 事件上下文结构体
      * 
@@ -65,24 +65,24 @@ class IOManager : public Scheduler, public TimerManager {
      * @return 对应事件的上下文引用
      */
     EventContext& getContext(Event event);
-    
+
     /**
      * @brief 重置事件上下文
      * @param event_ctx 要重置的事件上下文
      */
     void resetContext(EventContext& event_ctx);
-    
+
     /**
      * @brief 触发指定事件
      * @param event 要触发的事件类型
      */
     void triggerEvent(Event event);
 
-    int fd;                    ///< 文件描述符
-    EventContext read;         ///< 读事件上下文
-    EventContext write;        ///< 写事件上下文
-    Event events{NONE};        ///< 当前监听的事件类型
-    MutexType mutex;           ///< 保护fd上下文的互斥锁
+    int fd;              ///< 文件描述符
+    EventContext read;   ///< 读事件上下文
+    EventContext write;  ///< 写事件上下文
+    Event events{NONE};  ///< 当前监听的事件类型
+    MutexType mutex;     ///< 保护fd上下文的互斥锁
   };
 
  public:
@@ -94,7 +94,7 @@ class IOManager : public Scheduler, public TimerManager {
    */
   IOManager(size_t threads = 1, bool use_caller = true,
             const std::string& name = "");
-  
+
   /**
    * @brief 析构函数
    * 
@@ -109,9 +109,8 @@ class IOManager : public Scheduler, public TimerManager {
    * @param cb 事件触发时的回调函数，如果为nullptr则使用当前协程
    * @return 成功返回0，失败返回-1
    */
-  int addEvent(int fd, Event event,
-               std::function<void()> cb = nullptr);
-  
+  int addEvent(int fd, Event event, std::function<void()> cb = nullptr);
+
   /**
    * @brief 删除指定的事件监听
    * @param fd 文件描述符
@@ -119,7 +118,7 @@ class IOManager : public Scheduler, public TimerManager {
    * @return 成功返回true，失败返回false
    */
   bool removeEvent(int fd, Event event);
-  
+
   /**
    * @brief 取消指定事件并触发回调（TODO: 待实现）
    * @param fd 文件描述符
@@ -127,20 +126,20 @@ class IOManager : public Scheduler, public TimerManager {
    * @return 成功返回true，失败返回false
    */
   bool cancelEvent(int fd, Event event);
-  
+
   /**
    * @brief 取消文件描述符上的所有事件（TODO: 待实现）
    * @param fd 文件描述符
    * @return 成功返回true，失败返回false
    */
   bool cancelAll(int fd);
-  
+
   /**
    * @brief 调整文件描述符上下文数组大小
    * @param sz 新的数组大小
    */
   void contextResize(size_t sz);
-  
+
   /**
    * @brief 安全地调整文件描述符上下文数组大小
    * @param sz 新的数组大小
@@ -168,14 +167,14 @@ class IOManager : public Scheduler, public TimerManager {
    * 通过管道向epoll写入数据来唤醒等待的线程
    */
   void tickle() override;
-  
+
   /**
    * @brief 空闲状态处理
    * 
    * 主要的IO事件循环，处理epoll事件和定时器
    */
   void idle() override;
-  
+
   /**
    * @brief 检查调度器是否正在停止
    * @return 如果正在停止返回true，否则返回false
@@ -191,12 +190,12 @@ class IOManager : public Scheduler, public TimerManager {
   void onTimerInsertAtFront() override;
 
  private:
-  int m_epfd{-1};             ///< epoll文件描述符，用于IO多路复用
-  int m_tickleFds[2];         ///< 管道文件描述符，用于线程间通信和唤醒
+  int m_epfd{-1};      ///< epoll文件描述符，用于IO多路复用
+  int m_tickleFds[2];  ///< 管道文件描述符，用于线程间通信和唤醒
 
   std::atomic<size_t> m_pendingEventCount{0};  ///< 待处理的事件数量
-  RWMutexType m_mutex;                          ///< 保护fd上下文数组的读写锁
-  std::vector<FdContext*> m_fdContexts;        ///< 文件描述符上下文数组
+  RWMutexType m_mutex;  ///< 保护fd上下文数组的读写锁
+  std::vector<FdContext*> m_fdContexts;  ///< 文件描述符上下文数组
 };
 
 }  // namespace East
