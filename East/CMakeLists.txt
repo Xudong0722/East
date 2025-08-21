@@ -32,6 +32,7 @@ set(DIR_LIB_SRCS
     src/util.cc 
     src/TcpServer.cc
     src/daemon.cc
+    src/env.cc
     http/Http.cc
     # http/http11_parser.rl.cc 
     # http/httpclient_parser.rl.cc

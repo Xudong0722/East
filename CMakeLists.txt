@@ -103,5 +103,8 @@ target_link_libraries(test_uri "${LIBS}")
 add_executable(test_daemon tests/test_daemon.cc)
 target_link_libraries(test_daemon "${LIBS}")
 
+add_executable(test_env tests/test_env.cc)
+target_link_libraries(test_env "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
