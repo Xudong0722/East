@@ -2,7 +2,7 @@
  * @Author: Xudong0722 
  * @Date: 2025-08-21 10:55:24 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-08-21 17:02:51
+ * @Last Modified time: 2025-08-21 21:01:55
  */
 #pragma once
 
@@ -30,8 +30,15 @@ class Env {
   void removeHelp(const std::string& key);
   void printHelp();
 
+  const std::string& getExe() const { return m_exe; }
+  const std::string& getCwd() const { return m_cwd; }
+
+  bool setEnv(const std::string& key, const std::string& value);
+  std::string getEnv(const std::string& key, const std::string& default_val = "");
  private:
   std::string m_program;
+  std::string m_exe;
+  std::string m_cwd;
   RWMutexType m_mutex;
   std::map<std::string, std::string> m_args;
   std::vector<std::pair<std::string, std::string>> m_helps;

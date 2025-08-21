@@ -2,15 +2,17 @@
  * @Author: Xudong0722 
  * @Date: 2025-08-21 11:25:40 
  * @Last Modified by: Xudong0722
- * @Last Modified time: 2025-08-21 17:50:51
+ * @Last Modified time: 2025-08-21 21:22:19
  */
 
 #include "env.h"
+#include "Elog.h"
 #include <algorithm>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
-#include "Elog.h"
+#include <unistd.h>
+#include <stdlib.h>
 
 namespace East {
 
@@ -18,6 +20,15 @@ static East::Logger::sptr g_logger = ELOG_NAME("system");
 
 bool Env::init(int argc, char** argv) {
   m_program = argv[0];
+  char link[1024];
+  char path[1024];
+  sprintf(link, "/proc/%d/exe", getpid());
+  readlink(link, path, sizeof(path));
+
+  m_exe = path;
+  auto pos = m_exe.find_last_of("/");
+  m_cwd = m_exe.substr(0, pos) + "/";
+  
   const char* key = nullptr;
   for (int i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
@@ -105,6 +116,16 @@ void Env::printHelp() {
   for (const auto& [k, v] : m_helps) {
     std::cout << std::setw(5) << k << "-" << v << '\n';
   }
+}
+
+bool Env::setEnv(const std::string& key, const std::string& value) {
+  return !setenv(key.c_str(), value.c_str(), 1);
+}
+
+std::string Env::getEnv(const std::string& key, const std::string& default_val){
+  auto res = getenv(key.c_str());
+  if(res == nullptr) return default_val;
+  return std::string(res);
 }
 
 }  // namespace East
