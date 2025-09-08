@@ -2,7 +2,7 @@
 
 East是一个基于协程的高性能C++服务器框架，采用现代C++17标准开发，提供了完整的网络编程基础设施。
 
-## 🚀 特性
+## 特性
 
 - **协程支持**: 基于ucontext_t实现的轻量级协程系统
 - **异步IO**: 基于epoll的高性能IO多路复用
@@ -11,7 +11,7 @@ East是一个基于协程的高性能C++服务器框架，采用现代C++17标�
 - **日志系统**: 高性能的异步日志记录
 - **跨平台**: 支持Linux系统（Windows支持计划中）
 
-## 🏗️ 项目结构
+## 项目结构
 
 ```
 East/
@@ -26,7 +26,378 @@ East/
 └── README.md                   # 项目文档
 ```
 
-## 📦 核心模块
+## benchmark
+
+环境：
+
+Linux 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC x86_64 GNU/Linux
+
+工具：
+sudo apt install apache2-utils -y
+
+AB tool
+
+### 结果
+
+benchmark/my_http_server.cc
+
+ab -n 1000000 -c 200 ...
+
+
+```
+# 单线程
+Server Software:        ast/1.0.0
+Server Hostname:        172.23.160.183
+Server Port:            8020
+
+Document Path:          /East
+Document Length:        137 bytes
+
+Concurrency Level:      200
+Time taken for tests:   19.406 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Total transferred:      247000000 bytes
+HTML transferred:       137000000 bytes
+Requests per second:    51530.58 [#/sec] (mean)
+Time per request:       3.881 [ms] (mean)
+Time per request:       0.019 [ms] (mean, across all concurrent requests)
+Transfer rate:          12429.74 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.4      0       4
+Processing:     0    3   1.1      3      12
+Waiting:        0    3   1.2      3      12
+Total:          1    4   1.0      4      12
+
+Percentage of the requests served within a certain time (ms)
+  50%      4
+  66%      4
+  75%      4
+  80%      4
+  90%      5
+  95%      6
+  98%      7
+  99%      8
+ 100%     12 (longest request)
+```
+
+```
+# 双线程
+Server Software:        ast/1.0.0
+Server Hostname:        172.23.160.183
+Server Port:            8020
+
+Document Path:          /East
+Document Length:        137 bytes
+
+Concurrency Level:      200
+Time taken for tests:   16.922 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Total transferred:      247000000 bytes
+HTML transferred:       137000000 bytes
+Requests per second:    59096.12 [#/sec] (mean)
+Time per request:       3.384 [ms] (mean)
+Time per request:       0.017 [ms] (mean, across all concurrent requests)
+Transfer rate:          14254.63 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    1   0.5      1       6
+Processing:     0    2   0.8      2      11
+Waiting:        0    2   0.7      2      10
+Total:          1    3   0.8      3      12
+
+Percentage of the requests served within a certain time (ms)
+  50%      3
+  66%      4
+  75%      4
+  80%      4
+  90%      4
+  95%      5
+  98%      5
+  99%      6
+ 100%     12 (longest request)
+```
+
+```
+# 10个线程
+Server Software:        ast/1.0.0
+Server Hostname:        172.23.160.183
+Server Port:            8020
+
+Document Path:          /East
+Document Length:        137 bytes
+
+Concurrency Level:      200
+Time taken for tests:   25.021 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Total transferred:      247000000 bytes
+HTML transferred:       137000000 bytes
+Requests per second:    39966.75 [#/sec] (mean)
+Time per request:       5.004 [ms] (mean)
+Time per request:       0.025 [ms] (mean, across all concurrent requests)
+Transfer rate:          9640.42 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.3      0       6
+Processing:     0    5   0.9      5      27
+Waiting:        0    5   0.9      5      23
+Total:          1    5   0.8      5      27
+
+Percentage of the requests served within a certain time (ms)
+  50%      5
+  66%      5
+  75%      5
+  80%      6
+  90%      6
+  95%      6
+  98%      7
+  99%      7
+ 100%     27 (longest request)
+```
+
+```
+# 20个线程
+Server Software:        ast/1.0.0
+Server Hostname:        172.23.160.183
+Server Port:            8020
+
+Document Path:          /East
+Document Length:        137 bytes
+
+Concurrency Level:      200
+Time taken for tests:   28.449 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Total transferred:      247000000 bytes
+HTML transferred:       137000000 bytes
+Requests per second:    35151.12 [#/sec] (mean)
+Time per request:       5.690 [ms] (mean)
+Time per request:       0.028 [ms] (mean, across all concurrent requests)
+Transfer rate:          8478.84 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.2      0       4
+Processing:     1    5   1.1      5      52
+Waiting:        0    5   1.1      5      52
+Total:          1    6   1.0      6      55
+
+Percentage of the requests served within a certain time (ms)
+  50%      6
+  66%      6
+  75%      6
+  80%      6
+  90%      7
+  95%      7
+  98%      7
+  99%      8
+ 100%     55 (longest request)
+```
+
+作为对比，我们看一下nginx相同参数下的性能情况：
+
+nginx 默认使用系统的核心数
+```
+Server Software:        nginx/1.18.0
+Server Hostname:        172.23.160.183
+Server Port:            80
+
+Document Path:          /East
+Document Length:        162 bytes
+
+Concurrency Level:      200
+Time taken for tests:   26.203 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Total transferred:      321000000 bytes
+HTML transferred:       162000000 bytes
+Requests per second:    38163.85 [#/sec] (mean)
+Time per request:       5.241 [ms] (mean)
+Time per request:       0.026 [ms] (mean, across all concurrent requests)
+Transfer rate:          11963.47 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    2   0.6      2       8
+Processing:     1    3   0.7      3       9
+Waiting:        0    2   0.7      2       9
+Total:          2    5   0.7      5      13
+
+Percentage of the requests served within a certain time (ms)
+  50%      5
+  66%      5
+  75%      6
+  80%      6
+  90%      6
+  95%      7
+  98%      7
+  99%      7
+ 100%     13 (longest request)
+```
+
+再来看一下长连接情况下的性能对比:
+
+```
+# East 单线程 长连接
+Document Path:          /East
+Document Length:        137 bytes
+
+Concurrency Level:      200
+Time taken for tests:   34.193 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Keep-Alive requests:    1000000
+Total transferred:      252000000 bytes
+HTML transferred:       137000000 bytes
+Requests per second:    29246.08 [#/sec] (mean)
+Time per request:       6.839 [ms] (mean)
+Time per request:       0.034 [ms] (mean, across all concurrent requests)
+Transfer rate:          7197.28 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       3
+Processing:     0    7   1.0      7      14
+Waiting:        0    7   1.0      7      14
+Total:          0    7   1.0      7      14
+
+Percentage of the requests served within a certain time (ms)
+  50%      7
+  66%      7
+  75%      7
+  80%      7
+  90%      8
+  95%      8
+  98%      9
+  99%      9
+ 100%     14 (longest request)
+```
+
+```
+# East 10线程 长连接
+Concurrency Level:      200
+Time taken for tests:   12.498 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Keep-Alive requests:    1000000
+Total transferred:      252000000 bytes
+HTML transferred:       137000000 bytes
+Requests per second:    80011.11 [#/sec] (mean)
+Time per request:       2.500 [ms] (mean)
+Time per request:       0.012 [ms] (mean, across all concurrent requests)
+Transfer rate:          19690.23 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       2
+Processing:     0    2   0.9      3       7
+Waiting:        0    2   0.9      3       7
+Total:          0    2   0.9      3       7
+
+Percentage of the requests served within a certain time (ms)
+  50%      3
+  66%      3
+  75%      3
+  80%      3
+  90%      3
+  95%      3
+  98%      3
+  99%      3
+ 100%      7 (longest request)
+```
+
+```
+#East 20线程 长连接
+Document Path:          /East
+Document Length:        137 bytes
+
+Concurrency Level:      200
+Time taken for tests:   13.104 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Keep-Alive requests:    1000000
+Total transferred:      252000000 bytes
+HTML transferred:       137000000 bytes
+Requests per second:    76314.36 [#/sec] (mean)
+Time per request:       2.621 [ms] (mean)
+Time per request:       0.013 [ms] (mean, across all concurrent requests)
+Transfer rate:          18780.49 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.0      0       2
+Processing:     0    3   1.5      3      72
+Waiting:        0    3   1.5      3      72
+Total:          0    3   1.5      3      72
+
+Percentage of the requests served within a certain time (ms)
+  50%      3
+  66%      3
+  75%      3
+  80%      3
+  90%      4
+  95%      4
+  98%      4
+  99%      4
+ 100%     72 (longest request)
+```
+
+```
+# Nginx 长连接
+Server Software:        nginx/1.18.0
+Server Hostname:        172.23.160.183
+Server Port:            80
+
+Document Path:          /East
+Document Length:        162 bytes
+
+Concurrency Level:      200
+Time taken for tests:   3.882 seconds
+Complete requests:      1000000
+Failed requests:        0
+Non-2xx responses:      1000000
+Keep-Alive requests:    990099
+Total transferred:      325950495 bytes
+HTML transferred:       162000000 bytes
+Requests per second:    257632.09 [#/sec] (mean)
+Time per request:       0.776 [ms] (mean)
+Time per request:       0.004 [ms] (mean, across all concurrent requests)
+Transfer rate:          82007.14 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       4
+Processing:     0    1   0.3      1       4
+Waiting:        0    1   0.3      1       4
+Total:          0    1   0.3      1       5
+
+Percentage of the requests served within a certain time (ms)
+  50%      1
+  66%      1
+  75%      1
+  80%      1
+  90%      1
+  95%      1
+  98%      2
+  99%      2
+ 100%      5 (longest request)
+```
+
+## 核心模块
 
 ### 1. 协程系统 (Fiber)
 
@@ -172,7 +543,7 @@ LoggerMgr (全局管理器)
 - `SpinLock`: 自旋锁（基于pthread_spinlock_t）
 - `Semaphore`: 信号量
 
-## 🛠️ 开发环境
+## 开发环境
 
 - **操作系统**: Linux (推荐Ubuntu 20.04+)
 - **编译器**: GCC 10.2.1+
@@ -183,7 +554,7 @@ LoggerMgr (全局管理器)
   - pthread
   - dl
 
-## 🚀 快速开始
+## 快速开始
 
 ### 1. 克隆项目
 ```bash
@@ -208,7 +579,7 @@ make -j$(nproc)
 ./bin/test_http_server
 ```
 
-## 📚 使用示例
+## 使用示例
 
 ### TCP服务器示例
 ```cpp
@@ -267,7 +638,7 @@ int main() {
 }
 ```
 
-## 🧪 测试
+## 测试
 
 项目包含完整的测试套件，覆盖所有核心模块：
 
@@ -282,11 +653,7 @@ make test
 ./bin/test_socket     # Socket测试
 ```
 
-## 📖 API文档
-
-详细的API文档请参考各模块的头文件，所有公共接口都包含完整的Google风格注释。
-
-## 🤝 贡献
+##  贡献
 
 欢迎提交Issue和Pull Request！在贡献代码前，请确保：
 
@@ -295,11 +662,11 @@ make test
 3. 更新相关文档
 4. 遵循Google C++代码风格
 
-## 📄 许可证
+## 许可证
 
 本项目采用MIT许可证，详见LICENSE文件。
 
-## 🔗 相关链接
+## 相关链接
 
 - [日志模块详细说明](https://xudong0722.github.io/2025/05/22/East-Log-Module/)
 - [项目博客](https://xudong0722.github.io/)

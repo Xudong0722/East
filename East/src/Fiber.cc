@@ -78,7 +78,7 @@ Fiber::Fiber(std::function<void()> cb, size_t stack_size, bool run_in_scheduler)
   makecontext(&m_ctx, &Fiber::MainFunc, 0);
 
   //setState(INIT);
-  ELOG_INFO(g_logger) << "Fiber created, id: " << m_id
+  ELOG_DEBUG(g_logger) << "Fiber created, id: " << m_id
                       << ", thread id: " << GetThreadId()
                       << ", run in scheduler: " << m_run_in_scheduler;
 }
@@ -102,10 +102,10 @@ Fiber::~Fiber() {
   }
 
   if (is_master_fiber) {
-    ELOG_INFO(g_logger) << "Main Fiber destroyed, id: " << m_id
+    ELOG_DEBUG(g_logger) << "Main Fiber destroyed, id: " << m_id
                         << ", thread id: " << GetThreadId();
   } else {
-    ELOG_INFO(g_logger) << "Fiber destroyed, id: " << m_id
+    ELOG_DEBUG(g_logger) << "Fiber destroyed, id: " << m_id
                         << ", thread id: " << GetThreadId();
   }
 }

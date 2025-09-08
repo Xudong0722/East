@@ -24,7 +24,7 @@ void HttpServer::handleClient(Socket::sptr client) {
   do {
     auto req = session->recvRequest();
     if (nullptr == req) {
-      ELOG_INFO(g_logger) << "recv http request fail, errno: " << errno
+      ELOG_DEBUG(g_logger) << "recv http request fail, errno: " << errno
                           << ", strerrno: " << strerror(errno)
                           << ", client: " << *client;
       break;
@@ -35,7 +35,8 @@ void HttpServer::handleClient(Socket::sptr client) {
     m_dispatch->handle(req, rsp, session);
     // rsp->setBody("hello world");
     session->sendResponse(rsp);
-  } while (m_isKeepAlive);
+    if(!m_isKeepAlive || req->isClose()) break;
+  } while (true);
   session->close();
 }
 

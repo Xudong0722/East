@@ -124,7 +124,7 @@ Socket::sptr Socket::accept() {
 bool Socket::init(int sock) {
   //目前只有accept会用到这个函数，用来初始化一些socket的参数
   auto fd = FdMgr::GetInst()->getFd(sock);
-  ELOG_INFO(g_logger) << fd;
+  //ELOG_INFO(g_logger) << fd;
   if (nullptr != fd && fd->isSocket() && !fd->isClosed()) {
     m_sock = sock;
     m_is_connected = true;

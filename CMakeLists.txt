@@ -106,5 +106,8 @@ target_link_libraries(test_daemon "${LIBS}")
 add_executable(test_env tests/test_env.cc)
 target_link_libraries(test_env "${LIBS}")
 
+add_executable(my_http_server benchmark/my_http_server.cc)
+target_link_libraries(my_http_server "${LIBS}")
+
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)

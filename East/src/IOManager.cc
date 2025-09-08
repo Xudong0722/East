@@ -577,6 +577,10 @@ void IOManager::idle() {
         real_events |= WRITE;
       }
 
+      if((fd_ctx->events & real_events) == NONE){
+        continue;
+      }
+
       // 计算剩余未触发的事件
       int left_events = (~real_events) & fd_ctx->events;
       int op = left_events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
@@ -593,7 +597,9 @@ void IOManager::idle() {
 
       // 将没有处理完的事件继续放进去或者是处理完了就删除掉不再监听
       int res2 = epoll_ctl(m_epfd, op, fd_ctx->fd, &event);
-      if (res2 != 0) {
+      //bool ignored = (res2 != 0 && op == EPOLL_CTL_DEL && errno == ENOENT);
+
+      if (res2 != 0 /*&& !ignored*/) {
         ELOG_ERROR(g_logger)
             << "epoll_ctl failed, ep fd: " << m_epfd << ", op: " << op
             << ", fd: " << fd_ctx->fd << ", fd events: " << fd_ctx->events
