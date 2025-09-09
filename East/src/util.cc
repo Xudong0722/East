@@ -10,6 +10,10 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <sys/types.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <string.h>
 
 #include "Elog.h"
 #include "Fiber.h"
@@ -89,5 +93,38 @@ std::string TimeSinceEpochToString(uint64_t tm) {
   std::stringstream ss;
   ss << std::put_time(&tm_local, "%Y-%m-%d %H:%M:%S");
   return ss.str();
+}
+
+void FSUtil::ListAllFile(std::vector<std::string>& files, const std::string& path, const std::string& suffix){
+  if(access(path.c_str(), 0) != 0) {
+    return ;
+  }
+
+  auto dir = opendir(path.c_str());
+  if(nullptr == dir) return ;
+
+  struct dirent* dp = nullptr;
+  while((dp = readdir(dir)) && dp != nullptr) {
+    if(dp->d_type == DT_DIR) {
+      if(!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, "..")) continue;
+      ListAllFile(files, path + "/" + dp->d_name, suffix);
+    }else if(dp->d_type == DT_REG){
+      std::string filename(dp->d_name);
+      if(suffix.empty()) {
+        files.push_back(path + "/" + filename);
+      }else{
+        //simple hanle
+        std::string ext;
+        size_t pos = filename.find_last_of('.');
+        if(pos != std::string::npos)
+          ext = filename.substr(pos+1);
+        if(ext == suffix) {
+          files.push_back(path + "/" + filename);
+        }
+      }
+    }
+  }
+
+  closedir(dir);
 }
 }  // namespace East

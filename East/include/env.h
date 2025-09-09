@@ -35,6 +35,8 @@ class Env {
 
   bool setEnv(const std::string& key, const std::string& value);
   std::string getEnv(const std::string& key, const std::string& default_val = "");
+
+  std::string getAbsolutePath(const std::string& path) const;
  private:
   std::string m_program;
   std::string m_exe;

@@ -6,8 +6,16 @@
  */
 
 #include "Config.h"
+#include "env.h"
+#include "Elog.h"
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace East {
+
+static East::Logger::sptr g_logger = ELOG_NAME("system");
 
 ConfigVarBase::sptr Config::LoopupBase(const std::string& name) {
   auto it = GetDatas().find(name);
@@ -26,7 +34,7 @@ void Config::ListAllMember(
     std::list<std::pair<std::string, const YAML::Node>>& output) {
   if (prefix.find_first_not_of("abcdefghijklmnopqrstuvwxyz._0123456789") !=
       std::string::npos) {
-    ELOG_ERROR(ELOG_ROOT())
+    ELOG_ERROR(g_logger)
         << "Config invalid name: " << prefix << " : " << node;
     return;
   }
@@ -61,6 +69,39 @@ void Config::LoadFromYML(const YAML::Node& root) {
         var->fromString(ss.str());
       }
     }
+  }
+}
+
+static std::map<std::string, uint64_t> s_file2modifytime;
+static East::Mutex s_mutex;
+
+void Config::LoadFromConfDir(const std::string& path) {
+  std::string abs_path = East::EnvMgr::GetInst()->getAbsolutePath(path);
+  std::vector<std::string> files;
+  FSUtil::ListAllFile(files, abs_path, "yml");
+
+  for(auto& i : files) {
+    struct stat st;
+    lstat(i.c_str(), &st);
+
+    if(s_file2modifytime[i] == static_cast<uint64_t>(st.st_mtime)) {
+      continue;
+    }
+    s_file2modifytime[i] = static_cast<uint64_t>(st.st_mtime);
+    try{
+      YAML::Node root = YAML::LoadFile(i);
+      LoadFromYML(root);
+      ELOG_INFO(g_logger) << "LoadConfFile file: " << i << " success.";
+    }catch(...) {
+      ELOG_ERROR(g_logger) << "LoadConfFile file: " << i << " failed.";
+    }
+  }
+}
+
+void Config::Visit(std::function<void(East::ConfigVarBase::sptr)> cb) {
+  MutexType::RLockGuard lock(GetMutex());
+  for(const auto& it : GetDatas()) {
+    cb(it.second);
   }
 }
 }  // namespace East

@@ -331,11 +331,13 @@ class ConfigVar : public ConfigVarBase {
 class Config {
  public:
   using ConfigVarMap = std::map<std::string, ConfigVarBase::sptr>;
-
+  using MutexType = RWLock;
   template <class T>
   static typename ConfigVar<T>::sptr Lookup(
       const std::string& name, const T& default_val,
       const std::string description = "") {
+
+    MutexType::WLockGuard lock(GetMutex());
     // auto res = Lookup<T>(name);
     // if (nullptr != res)                  // Maybe same key, different data type, we need to prevent this case
     // {
@@ -372,6 +374,7 @@ class Config {
 
   template <class T>
   static typename ConfigVar<T>::sptr Lookup(const std::string& name) {
+    MutexType::RLockGuard lock(GetMutex());
     auto it = GetDatas().find(name);
     if (it == GetDatas().end())
       return nullptr;
@@ -383,11 +386,20 @@ class Config {
       const std::string& prefix, const YAML::Node& node,
       std::list<std::pair<std::string, const YAML::Node>>& output);
   static void LoadFromYML(const YAML::Node& root);
+  static void LoadFromConfDir(const std::string& path);
+
+  static void Visit(std::function<void(East::ConfigVarBase::sptr)> cb);
 
  private:
   static ConfigVarMap& GetDatas() {
     static ConfigVarMap s_datas;
     return s_datas;
   }
+
+  static MutexType& GetMutex() {
+    static MutexType mutex;
+    return mutex;
+  }
+
 };
 }  // namespace East

@@ -9,6 +9,7 @@
 #include <iostream>
 #include "../East/include/Config.h"
 #include "../East/include/Elog.h"
+#include "../East/include/env.h"
 
 East::ConfigVar<int>::sptr g_int_value_config =
     East::Config::Lookup("system.port", (int)8080, "system port");
@@ -193,9 +194,26 @@ void test_log() {
   ELOG_INFO(system_log) << "Hello system";
 }
 
-int main() {
+void test_load_from_conf() {
+  East::Config::LoadFromConfDir("conf");
+}
+
+int main(int argc, char** argv) {
   // test_yml();
   //test_config();
-  test_log();
+  //test_log();
+
+  East::EnvMgr::GetInst()->init(argc, argv);
+  test_load_from_conf();
+  std::cout << "============================================\n";
+  sleep(10);
+  test_load_from_conf();
+
+  // East::Config::Visit([](East::ConfigVarBase::sptr var){
+  //   ELOG_INFO(ELOG_ROOT()) << "name=" << var->getName()
+  //     << " description: " << var->getDescription()
+  //     << " typename: " << var->getTypeName()
+  //     << " value: " << var->toString();
+  // });
   return 0;
 }

@@ -38,4 +38,8 @@ auto Enum2Utype(T e) -> std::underlying_type_t<T> {
   return static_cast<std::underlying_type_t<T>>(e);
 }
 
+class FSUtil {
+public:
+  static void ListAllFile(std::vector<std::string>& files, const std::string& path, const std::string& suffix);
+};
 }  // namespace East
